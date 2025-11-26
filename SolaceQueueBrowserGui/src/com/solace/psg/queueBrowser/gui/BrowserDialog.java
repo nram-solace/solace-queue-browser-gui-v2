@@ -144,7 +144,7 @@ public class BrowserDialog implements IDragDropInstigator {
 
 	@SuppressWarnings("serial")
 	void run() throws JCSMPException {
-		int totalTableWidth = 1480; 
+		int totalTableWidth = 1480;
 		// Create the dialog
 		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue, true);
 		dialog.setSize(1600, 1200);
@@ -598,6 +598,11 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 			String selectedTargetQueue = (String) comboBox.getSelectedItem();
 			setStatus(ids.size() + " messages were " + action+ " to " + selectedTargetQueue);
+
+			// Update the display to remove all moved messages
+			if (deleteFromSource) {
+				updateDisplayAfterMultipleDeletes(ids);
+			}
 		}
 		else {
 			String id = ids.get(0);
@@ -606,7 +611,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	}
 	private void moveOrCopyMessage(String id, boolean deleteFromSource, boolean showStatus) {
 		String selectedTargetQueue = (String) comboBox.getSelectedItem();
-		
+
 		BytesXMLMessage msg = browser.get(id);
 		ReplicationGroupMessageId replicationId = msg.getReplicationGroupMessageId();
 		try {
@@ -616,23 +621,71 @@ public class BrowserDialog implements IDragDropInstigator {
 			if (deleteFromSource == true) {
 				action = "moved";
 			}
-			String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + action + 
+			String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + action +
 					" from the '" + this.queue + "' queue to the '" + selectedTargetQueue + "'.";
 			CommandLog.instance().log(logMsg);
-			
+
 			if (showStatus) {
 				setStatus (logMsg);
 			}
-			
+
 		} catch (SempException e1) {
 			e1.printStackTrace();
 		}
 		if (deleteFromSource) {
 			browser.delete(id);
-			int selectedRow = table.getSelectedRow();
-			if (selectedRow != -1) {
-				tableModel.removeRow(selectedRow);
+			// For single message moves, remove the row immediately
+			if (showStatus) {
+				int selectedRow = table.getSelectedRow();
+				if (selectedRow != -1) {
+					tableModel.removeRow(selectedRow);
+					numberOfMessagesOnTheCurrentPage--;
+				}
 			}
+		}
+	}
+
+	private void updateDisplayAfterMultipleDeletes(ArrayList<String> ids) {
+		// Remove all rows corresponding to the deleted message IDs from the display
+		boolean finished = false;
+		while (!finished) {
+			boolean deletedAnyThisRun = false;
+			for (int rowIter = 0; rowIter < table.getRowCount(); rowIter++) {
+				String id = (String) table.getValueAt(rowIter, nIdColumn);
+
+				// Was this message deleted?
+				for (String oneDeletedId : ids) {
+					if (id.equals(oneDeletedId)) {
+						tableModel.removeRow(rowIter);
+						numberOfMessagesOnTheCurrentPage--;
+
+						// Now the model is different, rows are offset, restart
+						deletedAnyThisRun = true;
+						break;
+					}
+				}
+				if (deletedAnyThisRun) {
+					// Found a match, restart the row iteration
+					if (table.getRowCount() == 0) {
+						finished = true;
+					}
+					break;
+				}
+			}
+			// If we went through all rows without finding any matches, we're done
+			if (!deletedAnyThisRun) {
+				finished = true;
+			}
+		}
+
+		// Reset selection state
+		currentSelectAllState = eSelectAllState.eIndeterminant;
+
+		// Auto-select the first row if there are messages remaining
+		if (table.getRowCount() > 0) {
+			autoSelectFirstRow();
+		} else {
+			clearMessageSelection();
 		}
 	}
 	
