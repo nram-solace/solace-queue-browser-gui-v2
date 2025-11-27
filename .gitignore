@@ -67,3 +67,4 @@ SolaceQueueBrowserGui/
 nram/**
 .claude/**
 out/**
+tmp/**

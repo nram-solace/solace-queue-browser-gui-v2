@@ -1,6 +1,7 @@
 package com.solace.psg.queueBrowser.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -32,8 +33,12 @@ import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
+
+import com.formdev.flatlaf.FlatLightLaf;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,7 +140,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 	private void run() {
 			// Create the frame
-			frame = new JFrame("Solace Queue Maintenace Tool");
+			frame = new JFrame("Solace Queue Maintenace Tool - feat/ui-improvements");
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			frame.setSize(1200, 800);
 			frame.setLayout(new BorderLayout());
@@ -247,6 +252,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
 			browseButton = new JButton("Browse");
 			browseButton.setEnabled(false);
+			browseButton.setBorder(new LineBorder(new Color(111, 66, 193), 2)); // Purple border
+			browseButton.setForeground(new Color(111, 66, 193)); // Purple text
 			browseButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -260,6 +267,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			copyAllButton = new JButton("Copy all...");
 			copyAllButton.setEnabled(false);
+			copyAllButton.setBorder(new LineBorder(new Color(13, 110, 253), 2)); // Blue border
+			copyAllButton.setForeground(new Color(13, 110, 253)); // Blue text
 			copyAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -269,6 +278,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			moveAllButton = new JButton("Move all...");
 			moveAllButton.setEnabled(false);
+			moveAllButton.setBorder(new LineBorder(new Color(255, 193, 7), 2)); // Yellow/Amber border
+			moveAllButton.setForeground(new Color(255, 143, 0)); // Orange text
 			moveAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -278,6 +289,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			deleteAllButton = new JButton("Delete all");
 			deleteAllButton.setEnabled(false);
+			deleteAllButton.setBorder(new LineBorder(new Color(220, 53, 69), 2)); // Red border
+			deleteAllButton.setForeground(new Color(220, 53, 69)); // Red text
 			deleteAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -288,6 +301,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			refreshButton = new JButton("Refresh");
 			refreshButton.setEnabled(true);
+			refreshButton.setBorder(new LineBorder(new Color(13, 202, 240), 2)); // Cyan border
+			refreshButton.setForeground(new Color(13, 202, 240)); // Cyan text
 			refreshButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -649,8 +664,22 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 //	}
 
 	public static void main(String[] args) throws BrokerException {
+		// Initialize FlatLaf before any GUI components
+		try {
+			UIManager.setLookAndFeel(new FlatLightLaf());
+		} catch (Exception ex) {
+			System.err.println("Failed to initialize FlatLaf, using default look and feel: " + ex.getMessage());
+		}
+
+		System.out.println("=================================================================");
+		System.out.println("Starting Solace Queue Browser - Version: feat/ui-improvements");
+		System.out.println("=================================================================");
+
 		CommandLineParser parser = new CommandLineParser();
 		parser.parseArgs(args);
+		logger.info("=================================================================");
+		logger.info("Starting Solace Queue Browser - Version: feat/ui-improvements");
+		logger.info("=================================================================");
 		logger.info("Configuration File: " + parser.configFileProvided);
 
 		QueueBrowserMainWindow me = new QueueBrowserMainWindow(parser.configFileProvided);
