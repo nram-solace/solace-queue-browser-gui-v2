@@ -49,6 +49,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 
@@ -146,7 +147,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	void run() throws JCSMPException {
 		int totalTableWidth = 1480;
 		// Create the dialog
-		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue, true);
+		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue + " [feat/ui-improvements]", true);
 		dialog.setSize(1600, 1200);
 		dialog.setLayout(new BorderLayout());
 		dialog.setModal(false);
@@ -155,11 +156,10 @@ public class BrowserDialog implements IDragDropInstigator {
 		JPanel topPanel = new JPanel(new BorderLayout());
 
 		ImageIcon icon = new ImageIcon("config/refresh48.png");
-		
+
         //JLabel iconLabel = new JLabel(icon);
-        JButton refreshButton = new JButton("Refresh", icon);
-        refreshButton.setHorizontalTextPosition(SwingConstants.RIGHT); // Text to the right of icon
-        refreshButton.setVerticalTextPosition(SwingConstants.CENTER);
+        JButton refreshButton = new JButton(icon);
+        refreshButton.setToolTipText("Refresh");
         refreshButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 onRefresh();
@@ -341,6 +341,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		delButton = new JButton("Delete");
 		delButton.setEnabled(false);
+		delButton.setBorder(new LineBorder(new Color(220, 53, 69), 2)); // Red border
+		delButton.setForeground(new Color(220, 53, 69)); // Red text
 		delButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -348,7 +350,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
-		nextMsgButton = new JButton("Next Message >");
+		nextMsgButton = new JButton("Next>");
 		nextMsgButton.setEnabled(false);
 		nextMsgButton.addActionListener(new ActionListener() {
 			@Override
@@ -356,7 +358,7 @@ public class BrowserDialog implements IDragDropInstigator {
 				onNextMessage();
 			}
 		});
-		prevMsgButton = new JButton("< Previous Message");
+		prevMsgButton = new JButton("<Prev");
 		prevMsgButton.setEnabled(false);
 		prevMsgButton.addActionListener(new ActionListener() {
 			@Override
@@ -366,6 +368,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		});
 		copyMessageMsgButton = new JButton("Copy to Queue:");
 		copyMessageMsgButton.setEnabled(false);
+		copyMessageMsgButton.setBorder(new LineBorder(new Color(13, 110, 253), 2)); // Blue border
+		copyMessageMsgButton.setForeground(new Color(13, 110, 253)); // Blue text
 		copyMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -375,6 +379,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		moveMessageMsgButton = new JButton("Move to Queue:");
 		moveMessageMsgButton.setEnabled(false);
+		moveMessageMsgButton.setBorder(new LineBorder(new Color(255, 193, 7), 2)); // Yellow/Amber border
+		moveMessageMsgButton.setForeground(new Color(255, 143, 0)); // Orange text
 		moveMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -388,6 +394,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
         downloadMessageMsgButton = new JButton("Download");
         downloadMessageMsgButton.setEnabled(false);
+        downloadMessageMsgButton.setBorder(new LineBorder(new Color(25, 135, 84), 2)); // Green border
+        downloadMessageMsgButton.setForeground(new Color(25, 135, 84)); // Green text
         downloadMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -395,8 +403,10 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
-		JButton filterButton = new JButton("Filter messages...");
+		JButton filterButton = new JButton("Filter");
 		filterButton.setEnabled(true);
+		filterButton.setBorder(new LineBorder(new Color(111, 66, 193), 2)); // Purple border
+		filterButton.setForeground(new Color(111, 66, 193)); // Purple text
 		filterButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {

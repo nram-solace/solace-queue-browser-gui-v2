@@ -104,7 +104,7 @@ public class QueueBrowser {
 			if (preFetchedNextMessage != null) {
 				@SuppressWarnings("deprecation")
 				String id = preFetchedNextMessage.getMessageId();
-				logger.debug("Fetched a msg, id =" + id);
+				// logger.debug("Fetched a msg, id =" + id);
 				this.lastIdFetched  = id;
 			}
 		} catch (JCSMPException e) {
