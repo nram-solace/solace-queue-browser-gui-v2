@@ -5,7 +5,7 @@
 		"sempAdminUser": "admin",
 		"sempAdminPw": "admin",
 		"msgVpnName": "default",
-		"messagingHost": "tcp://localhost:55555",
+		"messagingHost": "tcp://localhost:55333",
 		"messagingClientUsername": "default",
 		"messagingPw": "default"
 	},

@@ -69,8 +69,29 @@ import com.solacesystems.jcsmp.JCSMPException;
 import com.solacesystems.jcsmp.ReplicationGroupMessageId;
 import com.solacesystems.jcsmp.SDTException;
 import com.solacesystems.jcsmp.SDTMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BrowserDialog implements IDragDropInstigator {
+	private static final Logger logger = LoggerFactory.getLogger(BrowserDialog.class.getName());
+	
+	// Helper method to log to both logger and stdout
+	private void logBoth(String message) {
+		logger.info(message);
+		System.out.println(message);
+	}
+	
+	// Helper method to log with thread information
+	private void logBothWithThread(String message) {
+		String threadInfo = " [Thread: " + Thread.currentThread().getName() + 
+			(isEDT() ? ", EDT" : ", Non-EDT") + "]";
+		logBoth(message + threadInfo);
+	}
+	
+	// Check if we're on the Event Dispatch Thread
+	private boolean isEDT() {
+		return SwingUtilities.isEventDispatchThread();
+	}
 	private Broker broker;
 	private PaginatedCachingBrowser browser;
 	private String queue;
@@ -94,6 +115,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	private JTable propsTable;
 	private DefaultTableModel propsTableModel; 
 	private JButton nextPageButton;
+	private JButton previousPageButton;
 	private JButton nextMsgButton;
 	private JButton delButton;
 	private JButton prevMsgButton;
@@ -152,19 +174,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		try {
 			this.browser = new PaginatedCachingBrowser(broker, this.queue, nItemsPerPage);
 			this.browser.setFilter(spec);
-			
-			// Test the connection immediately by trying to get the first page
-			// This will fail fast if SMF connection doesn't work
-			try {
-				java.util.ArrayList<com.solacesystems.jcsmp.BytesXMLMessage> testPage = this.browser.getPage(0);
-			} catch (Exception e) {
-				// Connection test failed - this means SMF is not working
-				String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection test failed", e);
-				throw new SempException(errorMsg);
-			}
-		} catch (SempException e) {
-			// Re-throw SempException as-is
-			throw e;
+			// Don't test connection here - let it fail during actual message loading
+			// This prevents interfering with the first page retrieval
 		} catch (Exception e) {
 			// SMF connection failed or any other error during browser creation
 			String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
@@ -213,21 +224,29 @@ public class BrowserDialog implements IDragDropInstigator {
 
 	@SuppressWarnings("serial")
 	void run() throws JCSMPException {
+		logBothWithThread("*** FUNCTION CALL: run() - START ***");
+		logBoth("*** run: Queue = " + this.queue + ", nCurPage = " + nCurPage + 
+			", nItemsPerPage = " + nItemsPerPage + ", browser = " + (browser != null ? "not null" : "null") + " ***");
 		// Check if browser was successfully initialized
 		if (this.browser == null) {
+			logBoth("*** run: browser is null - cannot proceed ***");
+			logger.error("*** run: browser is null - cannot proceed ***");
 			String errorMsg = "SMF (Messaging) connection failed. Cannot browse messages.\n\n" +
 				"Please check your messaging credentials and network connectivity.";
 			JOptionPane.showMessageDialog(parentFrame, 
 				errorMsg,
 				"SMF Connection Failed",
 				JOptionPane.ERROR_MESSAGE);
+			logBoth("*** run: Returning early due to null browser ***");
 			return; // Don't show empty dialog
 		}
 		
+		logBoth("*** run: Browser is not null, creating dialog ***");
 		int totalTableWidth = 1480;
 		// Create the dialog
 		String versionStr = config != null ? config.version : "v2.0.2";
 		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue + " [" + versionStr + "]", true);
+		logBoth("*** run: Dialog created, about to set visible ***");
 		dialog.setSize(1600, 1200);
 		dialog.setLayout(new BorderLayout());
 		dialog.setModal(false);
@@ -239,6 +258,7 @@ public class BrowserDialog implements IDragDropInstigator {
         refreshTopButton.setBackground(new Color(220, 245, 255)); // Soft cyan background
         refreshTopButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+                logBoth("*** BUTTON CLICK: Refresh button clicked ***");
                 onRefresh();
             }
         });
@@ -251,6 +271,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		filterTopButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				logBoth("*** BUTTON CLICK: Filter button clicked ***");
 				onClickFilter(dialog, tableModel, filterTopButton);
 			}
 		});
@@ -280,12 +301,13 @@ public class BrowserDialog implements IDragDropInstigator {
 		    }
 		});
 
-		JButton previousPageButton = new JButton("<< Prev");
+		previousPageButton = new JButton("<< Prev");
 		previousPageButton.setEnabled(false);
 		previousPageButton.setBackground(new Color(230, 240, 255)); // Soft light blue background
 		previousPageButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				logBoth("*** BUTTON CLICK: Previous Page button clicked ***");
 				onPreviousPage(dialog, tableModel, previousPageButton);
 			}
 		});
@@ -296,6 +318,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		nextPageButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				logBoth("*** BUTTON CLICK: Next Page button clicked ***");
 				onNextPage(dialog, tableModel, previousPageButton);
 			}
 		});
@@ -624,54 +647,41 @@ public class BrowserDialog implements IDragDropInstigator {
 		// dialog.setVisible(true);
 
 		// Show dialog first, then try to load messages
+		logBoth("*** run: Setting dialog visible = true ***");
 		dialog.setVisible(true);
+		logBoth("*** run: Dialog is now visible, tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		
 		// Try to load messages - if this fails, show error dialog
+		// Use the same pattern as restartAfterFilter: set nCurPage to 0 and call onNextPage
+		// This ensures consistent behavior with refresh
+		logBoth("*** INITIAL LOAD: Setting up invokeLater for initial message load ***");
+		logBothWithThread("*** INITIAL LOAD: Before invokeLater, current thread ***");
 		SwingUtilities.invokeLater(() -> {
 			try {
+				logBothWithThread("*** INITIAL LOAD: invokeLater callback started ***");
+				logBoth("*** INITIAL LOAD: Current nCurPage = " + nCurPage + 
+					", tableModel rowCount = " + tableModel.getRowCount() + 
+					", dialog visible = " + dialog.isVisible() + " ***");
 				dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 				
-				// Test connection by trying to get first page
-				nCurPage = 0;
-				Object[][] testData = null;
-				try {
-					testData = this.getMessages();
-				} catch (BrokerException e) {
-					// SMF connection failed - show error and close dialog
-					String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
-					// Show error dialog immediately - we're already on EDT from invokeLater
-					JOptionPane.showMessageDialog(dialog, 
-						errorMsg,
-						"SMF Connection Failed",
-						JOptionPane.ERROR_MESSAGE);
-					dialog.dispose(); // Close the empty dialog
-					dialog.setCursor(Cursor.getDefaultCursor());
-					return; // Don't continue
-				} catch (Exception e) {
-					// Any other exception
-					String errorMsg = buildDetailedErrorMessage("Failed to load messages", e);
-					// Show error dialog immediately - we're already on EDT from invokeLater
-					JOptionPane.showMessageDialog(dialog, 
-						errorMsg,
-						"Error Loading Messages",
-						JOptionPane.ERROR_MESSAGE);
-					dialog.dispose(); // Close the empty dialog
-					dialog.setCursor(Cursor.getDefaultCursor());
-					return; // Don't continue
-				}
-				
-				// If we got here, messages loaded successfully
-				display(tableModel, testData);
-				rowCount = testData != null ? testData.length : 0;
-				
+				// Use the exact same pattern as restartAfterFilter
+				logBoth("*** INITIAL LOAD: Clearing table model (current rowCount = " + tableModel.getRowCount() + ") ***");
+				tableModel.setRowCount(0);
+				logBoth("*** INITIAL LOAD: Table model cleared, rowCount = " + tableModel.getRowCount() + " ***");
+				logBoth("*** INITIAL LOAD: Calling preFetch() ***");
 				preFetch();
-				onPageChange();
+				logBoth("*** INITIAL LOAD: preFetch() completed, Setting nCurPage = 0 (was " + nCurPage + ") ***");
+				nCurPage = 0;
+				logBoth("*** INITIAL LOAD: nCurPage set to " + nCurPage + ", Calling onNextPage() ***");
+				logBoth("*** INITIAL LOAD: nextPageButton = " + (nextPageButton != null ? "not null" : "null") + 
+					", enabled = " + (nextPageButton != null ? nextPageButton.isEnabled() : "N/A") + " ***");
+				onNextPage(dialog, tableModel, nextPageButton); // Match restartAfterFilter exactly
+				logBoth("*** INITIAL LOAD: onNextPage() completed, tableModel rowCount = " + tableModel.getRowCount() + " ***");
 				
-				if (rowCount > 0) {
-					autoSelectFirstRow();
-				}
 			} catch (Exception e) {
-				// Handle any other errors during initialization
+				logBoth("*** INITIAL LOAD: Exception occurred: " + e.getMessage() + " ***");
+				logger.error("*** INITIAL LOAD: Exception occurred: " + e.getMessage() + " ***", e);
+				// Handle any errors during initialization
 				String errorMsg = buildDetailedErrorMessage("Failed to initialize message browser", e);
 				JOptionPane.showMessageDialog(dialog, 
 					errorMsg,
@@ -680,6 +690,7 @@ public class BrowserDialog implements IDragDropInstigator {
 				dialog.dispose(); // Close the empty dialog
 			} finally {
 				dialog.setCursor(Cursor.getDefaultCursor());
+				logBoth("*** INITIAL LOAD: invokeLater callback completed ***");
 			}
 		});
 	}
@@ -688,15 +699,24 @@ public class BrowserDialog implements IDragDropInstigator {
 	}
 	
 	private void onRefresh() {
+		logBothWithThread("*** FUNCTION CALL: onRefresh() - START ***");
+		logBoth("*** onRefresh: Current nCurPage = " + nCurPage + 
+			", tableModel rowCount = " + tableModel.getRowCount() + 
+			", browser = " + (browser != null ? "not null" : "null") + " ***");
 		dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		try {
+			logBoth("*** onRefresh: Calling initialize() ***");
 			initialize();
+			logBoth("*** onRefresh: initialize() completed successfully ***");
 		} catch (SempException e) {
-			// TODO Auto-generated catch block
+			logBoth("*** onRefresh: initialize() failed with SempException: " + e.getMessage() + " ***");
+			logger.error("*** onRefresh: initialize() failed with SempException: " + e.getMessage() + " ***", e);
 			e.printStackTrace();
 		}
 		SwingUtilities.invokeLater(() -> {
+			logBoth("*** onRefresh: Calling restartAfterFilter('Refreshing') ***");
 			restartAfterFilter("Refreshing");
+			logBoth("*** FUNCTION CALL: onRefresh() - END ***");
 		});
 	}
 	private void onClickFilter(JDialog dialog, DefaultTableModel tableModel, JButton filterButton) {
@@ -721,6 +741,10 @@ public class BrowserDialog implements IDragDropInstigator {
 		
 	}
 	private void restartAfterFilter(String title) {
+		logBothWithThread("*** FUNCTION CALL: restartAfterFilter('" + title + "') - START ***");
+		logBoth("*** restartAfterFilter: Current nCurPage = " + nCurPage + 
+			", tableModel rowCount = " + tableModel.getRowCount() + 
+			", filterStatus = " + (spec.isEmpty() ? "OFF" : "ON") + " ***");
 
 		SpinnerDialog spinner = new SpinnerDialog(dialog, title);
 
@@ -730,17 +754,33 @@ public class BrowserDialog implements IDragDropInstigator {
 			filterStatusLabel.setText("(" + filterStatus + ")");
 		}
 
+		logBoth("*** restartAfterFilter: Clearing table model ***");
 		tableModel.setRowCount(0);
+		logBoth("*** restartAfterFilter: Calling preFetch() ***");
 		preFetch();
+		logBoth("*** restartAfterFilter: Setting nCurPage = 0 ***");
 		nCurPage = 0;
+		logBoth("*** restartAfterFilter: Calling onNextPage() ***");
 		onNextPage(dialog, tableModel, nextPageButton);
+		logBoth("*** restartAfterFilter: onNextPage() completed ***");
 
 		spinner.setVisible(false);
+		logBoth("*** FUNCTION CALL: restartAfterFilter('" + title + "') - END ***");
 	}
 
 	private void autoSelectFirstRow() {
-		table.setRowSelectionInterval(0, 0);
-		onSelectMessage(table, 0);
+		logBoth("*** FUNCTION CALL: autoSelectFirstRow() - START ***");
+		logBoth("*** autoSelectFirstRow: table rowCount = " + table.getRowCount() + 
+			", tableModel rowCount = " + tableModel.getRowCount() + " ***");
+		if (table.getRowCount() > 0) {
+			table.setRowSelectionInterval(0, 0);
+			logBoth("*** autoSelectFirstRow: Row 0 selected, Calling onSelectMessage() ***");
+			onSelectMessage(table, 0);
+			logBoth("*** autoSelectFirstRow: onSelectMessage() completed ***");
+		} else {
+			logBoth("*** autoSelectFirstRow: WARNING - table rowCount = 0, cannot select first row ***");
+		}
+		logBoth("*** FUNCTION CALL: autoSelectFirstRow() - END ***");
 	}
 	
 	private void onMoveMessage() {
@@ -1264,9 +1304,15 @@ public class BrowserDialog implements IDragDropInstigator {
 	boolean cantBrowseWarningIssuedAlready = false;
 	boolean smfConnectionErrorShown = false; // Track if we've already shown SMF error
 	private void preFetch() {
+		logBothWithThread("*** FUNCTION CALL: preFetch() - START ***");
+		logBoth("*** preFetch: browser = " + (browser != null ? "not null" : "null") + 
+			", current nCurPage = " + nCurPage + " ***");
 		try {
+			logBoth("*** preFetch: Acquiring semaphore ***");
 			semaphore.acquire();
+			logBoth("*** preFetch: Semaphore acquired, Calling browser.prefetchNextPage() ***");
 			browser.prefetchNextPage();
+			logBoth("*** preFetch: browser.prefetchNextPage() completed successfully ***");
 		} catch (BrokerException e) {
 			if (e.getMessage() != null && e.getMessage().contains("Browsing Not Supported on Partitioned Queue")) {
 				if (! cantBrowseWarningIssuedAlready) {
@@ -1288,8 +1334,12 @@ public class BrowserDialog implements IDragDropInstigator {
 				}
 			}
 		} catch (InterruptedException e) {
+			logBoth("*** preFetch: Interrupted ***");
+			logger.warn("*** preFetch: Interrupted ***");
 			// Interrupted - ignore
 		} catch (Exception e) {
+			logBoth("*** preFetch: Exception occurred: " + e.getMessage() + " ***");
+			logger.error("*** preFetch: Exception occurred: " + e.getMessage() + " ***", e);
 			// Catch any other exceptions
 			if (!smfConnectionErrorShown && this.dialog != null) {
 				smfConnectionErrorShown = true;
@@ -1304,36 +1354,64 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		} finally {
 			semaphore.release();
+			logBoth("*** preFetch: Semaphore released ***");
+			logBothWithThread("*** FUNCTION CALL: preFetch() - END ***");
 		}
 	}
 
 	private void onPageChange() {
+		logBoth("*** FUNCTION CALL: onPageChange() - nCurPage = " + nCurPage + 
+			", estimatedPageCount = " + estimatedPageCount + " ***");
 		// Update topLabel with plain text (no HTML) using Serif font
-		topLabel.setText("Page " + nCurPage + " of ~ " + estimatedPageCount);
+		String pageText = "Page " + nCurPage + " of ~ " + estimatedPageCount;
+		topLabel.setText(pageText);
+		logBoth("*** onPageChange: topLabel set to '" + pageText + "' ***");
 		textArea.setText("");
+		logBoth("*** onPageChange: textArea cleared ***");
 	}
 
 	private void display(DefaultTableModel tableModel, Object[][] dataUpdate) {
+		logBothWithThread("*** FUNCTION CALL: display() - START ***");
+		logBoth("*** display: dataUpdate.length = " + (dataUpdate != null ? dataUpdate.length : 0) + 
+			", tableModel rowCount before = " + tableModel.getRowCount() + " ***");
 		tableModel.setRowCount(0);
 		numberOfMessagesOnTheCurrentPage = 0;
+		logBoth("*** display: Table model cleared, numberOfMessagesOnTheCurrentPage reset to 0 ***");
+		int rowsAdded = 0;
 		for (Object[] oneRow : dataUpdate) {
 			tableModel.addRow(oneRow);
 			lastIdAdded = (String) oneRow[nIdColumn];
 			numberOfMessagesOnTheCurrentPage++;
+			rowsAdded++;
 		}
+		logBoth("*** display: Added " + rowsAdded + " rows to tableModel, rowCount now = " + tableModel.getRowCount() + 
+			", lastIdAdded = " + (lastIdAdded != null ? lastIdAdded : "null") + " ***");
 		
 		if (dataUpdate.length > 0) {
+			logBoth("*** display: dataUpdate.length > 0, Calling autoSelectFirstRow() ***");
 			autoSelectFirstRow();
+			logBoth("*** display: autoSelectFirstRow() completed ***");
+		} else {
+			logBoth("*** display: dataUpdate.length = 0, skipping autoSelectFirstRow() ***");
 		}
+		logBoth("*** display: numberOfMessagesOnTheCurrentPage = " + numberOfMessagesOnTheCurrentPage + 
+			", tableModel final rowCount = " + tableModel.getRowCount() + " ***");
+		logBothWithThread("*** FUNCTION CALL: display() - END ***");
 	}
 
 	private void onPreviousPage(JDialog dialog, DefaultTableModel tableModel, JButton backButton) {
+		logBothWithThread("*** FUNCTION CALL: onPreviousPage() - START ***");
+		logBoth("*** onPreviousPage: Current nCurPage = " + nCurPage + 
+			", tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		nCurPage--;
+		logBoth("*** onPreviousPage: Decremented nCurPage to " + nCurPage + " ***");
 		
 		Object[][] dataUpdate = null;
 		try {
+			logBoth("*** onPreviousPage: Calling getMessages() ***");
 			dataUpdate = this.getMessages();
+			logBoth("*** onPreviousPage: getMessages() returned " + (dataUpdate != null ? dataUpdate.length : 0) + " messages ***");
 		} catch (BrokerException e) {
 			// Show error dialog if SMF connection fails
 			String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
@@ -1354,7 +1432,9 @@ public class BrowserDialog implements IDragDropInstigator {
 			e.printStackTrace();
 			dataUpdate = new Object[0][];
 		} 
+		logBoth("*** onPreviousPage: Calling display() with " + (dataUpdate != null ? dataUpdate.length : 0) + " rows ***");
 		display(tableModel, dataUpdate);
+		logBoth("*** FUNCTION CALL: onPreviousPage() - END ***");
 
 		if (nCurPage < 2) {
 			backButton.setEnabled(false);
@@ -1371,17 +1451,28 @@ public class BrowserDialog implements IDragDropInstigator {
 	private boolean shouldNextPageButtonBeActive() {
 		return browser.hasMoreAfterId(lastIdAdded);
 	}
+	
 	int rowCount = 0;
 	private void onNextPage(JDialog dialog, DefaultTableModel tableModel, JButton backButton) {
+		logBothWithThread("*** FUNCTION CALL: onNextPage() - START ***");
+		logBoth("*** onNextPage: Current nCurPage = " + nCurPage + 
+			", tableModel rowCount = " + tableModel.getRowCount() + 
+			", dialog = " + (dialog != null ? "not null" : "null") + 
+			", backButton = " + (backButton != null ? "not null" : "null") + " ***");
 		dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		nCurPage++;
+		logBoth("*** onNextPage: Incremented nCurPage to " + nCurPage + " ***");
 		Object[][] dataUpdate = null;
 		
 		try {
+			logBoth("*** onNextPage: Calling getMessages() ***");
 			dataUpdate = this.getMessages();
 			rowCount = dataUpdate.length;
+			logBoth("*** onNextPage: getMessages() returned " + rowCount + " messages ***");
 		} catch (BrokerException e) {
 			// Show error dialog if SMF connection fails
+			logBoth("*** onNextPage: getMessages() failed with BrokerException: " + e.getMessage() + " ***");
+			logger.error("*** onNextPage: getMessages() failed with BrokerException: " + e.getMessage() + " ***", e);
 			String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
 			// Show error dialog immediately
 			JOptionPane.showMessageDialog(dialog, 
@@ -1393,6 +1484,8 @@ public class BrowserDialog implements IDragDropInstigator {
 			rowCount = 0;
 		} catch (Exception e) {
 			// Catch any other exceptions
+			logBoth("*** onNextPage: getMessages() failed with Exception: " + e.getMessage() + " ***");
+			logger.error("*** onNextPage: getMessages() failed with Exception: " + e.getMessage() + " ***", e);
 			String errorMsg = buildDetailedErrorMessage("Unexpected error loading messages", e);
 			JOptionPane.showMessageDialog(dialog, 
 				errorMsg,
@@ -1401,28 +1494,65 @@ public class BrowserDialog implements IDragDropInstigator {
 			dataUpdate = new Object[0][];
 			rowCount = 0;
 		}
+		logBoth("*** onNextPage: Calling display() with " + (dataUpdate != null ? dataUpdate.length : 0) + " rows ***");
 		display(tableModel, dataUpdate);
+		logBoth("*** onNextPage: display() completed, tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		
-		backButton.setEnabled(true);
+		if (backButton != null) {
+			boolean wasEnabled = backButton.isEnabled();
+			backButton.setEnabled(true);
+			logBoth("*** onNextPage: backButton enabled set to true (was " + wasEnabled + ") ***");
+		} else {
+			logBoth("*** onNextPage: WARNING - backButton is null! ***");
+		}
 		
 		// see if the browser has any more messages after the last one onscreen
-		nextPageButton.setEnabled(shouldNextPageButtonBeActive());
+		boolean hasMore = shouldNextPageButtonBeActive();
+		if (nextPageButton != null) {
+			boolean wasEnabled = nextPageButton.isEnabled();
+			nextPageButton.setEnabled(hasMore);
+			logBoth("*** onNextPage: nextPageButton enabled set to " + hasMore + " (was " + wasEnabled + 
+				", hasMoreAfterId = " + hasMore + ") ***");
+		} else {
+			logBoth("*** onNextPage: WARNING - nextPageButton is null! ***");
+		}
 		onPageChange();
 		dialog.setCursor(Cursor.getDefaultCursor());
+		logBoth("*** onNextPage: Cursor reset to default ***");
 
+		logBoth("*** onNextPage: Setting up invokeLater for autoSelectFirstRow and preFetch, rowCount = " + rowCount + " ***");
 		SwingUtilities.invokeLater(() -> {
-			
+			logBothWithThread("*** onNextPage: invokeLater callback started ***");
 			if (rowCount > 0) {
+				logBoth("*** onNextPage: rowCount > 0, Calling autoSelectFirstRow() ***");
 				autoSelectFirstRow();
+				logBoth("*** onNextPage: autoSelectFirstRow() completed ***");
+			} else {
+				logBoth("*** onNextPage: rowCount = 0, skipping autoSelectFirstRow() ***");
 			}
+			logBoth("*** onNextPage: Calling preFetch() ***");
 			preFetch();
+			logBoth("*** onNextPage: preFetch() completed ***");
 		});
+		logBothWithThread("*** FUNCTION CALL: onNextPage() - END ***");
 	}
 
 	private Object[][] getMessages() throws BrokerException {
+		logBothWithThread("*** FUNCTION CALL: getMessages() - START ***");
+		logBoth("*** getMessages: nCurPage = " + nCurPage + ", calling browser.getPage(" + (nCurPage - 1) + 
+			"), browser = " + (browser != null ? "not null" : "null") + " ***");
 		// Create an ArrayList of ArrayList<String> to store the data
 		ArrayList<ArrayList<String>> dynamicArray = new ArrayList<>();
-		ArrayList<BytesXMLMessage> thisPage = browser.getPage(nCurPage - 1); // its star6 counting at 0
+		ArrayList<BytesXMLMessage> thisPage = null;
+		try {
+			thisPage = browser.getPage(nCurPage - 1); // its star6 counting at 0
+			logBoth("*** getMessages: browser.getPage(" + (nCurPage - 1) + ") returned " + 
+				(thisPage != null ? thisPage.size() : 0) + " messages ***");
+		} catch (Exception e) {
+			logBoth("*** getMessages: browser.getPage() threw exception: " + e.getClass().getSimpleName() + 
+				" - " + e.getMessage() + " ***");
+			throw e;
+		}
 
 		for (BytesXMLMessage message : thisPage) {
 			ArrayList<String> row = new ArrayList<>();
@@ -1462,11 +1592,13 @@ public class BrowserDialog implements IDragDropInstigator {
 			data[i][0] = false;
 			data[i][1] = messageIcon;
 			for (int y = 0; y < row.size(); y++) {
-				data[i][y+2] = row.get(y);	
-			}
+			data[i][y+2] = row.get(y);	
 		}
-		return data;
 	}
+		logBoth("*** getMessages: Processed " + dynamicArray.size() + " messages, returning " + data.length + " rows ***");
+		logBothWithThread("*** FUNCTION CALL: getMessages() - END ***");
+		return data;
+}
 	
     private class TableMouseListener extends MouseAdapter {
         private final JTable table;

@@ -398,19 +398,12 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			JLabel greetingLine1 = new JLabel("Service: " + broker.msgVpnName + " | SEMP User: " + broker.sempAdminUser + " | Client User: " + broker.messagingClientUsername);
 			greetingLine1.setBorder(new EmptyBorder(0, 0, 6, 0)); // Top, Left, Bottom, Right
 			greetingLine1.setFont(greetingLine0.getFont());
-			
-			// Verification label to confirm we're running v2.0.2
-			JLabel verificationLabel = new JLabel("*** v2.0.2 - SMF Error Handling Enabled ***");
-			verificationLabel.setFont(new Font(headerFontFamily, Font.BOLD, 14));
-			verificationLabel.setForeground(Color.RED);
-			verificationLabel.setBorder(new EmptyBorder(0, 0, 6, 0));
 
 			JPanel wordsPanel = new JPanel();
 			wordsPanel.setLayout(new BoxLayout(wordsPanel, BoxLayout.Y_AXIS));
 			wordsPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4)); // Add some margin
 			wordsPanel.add(greetingLine0);
 			wordsPanel.add(greetingLine1);
-			wordsPanel.add(verificationLabel);
 
 			JPanel topPanel = new JPanel(new BorderLayout());
 			topPanel.add(iconLabel,BorderLayout.WEST);
