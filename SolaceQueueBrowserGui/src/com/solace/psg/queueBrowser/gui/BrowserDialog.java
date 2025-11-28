@@ -1028,14 +1028,22 @@ public class BrowserDialog implements IDragDropInstigator {
 	
 	private void onDeleteMessage(JTable table, Component dialog) {
 		ArrayList<Integer> allSelectedRowNumbers = getAllSelectedRows();
-		String prompt = "";
-		if (allSelectedRowNumbers.size() == 1) {
-			String id = getMessageIdOfSelectedRow();
-			prompt = "Are you sure you want to delete message (" + id + ")?"; 
+		
+		// If no checkboxes are selected, use the currently focused row
+		if (allSelectedRowNumbers.isEmpty()) {
+			int focusedRow = table.getSelectedRow();
+			if (focusedRow >= 0 && focusedRow < table.getRowCount()) {
+				allSelectedRowNumbers.add(focusedRow);
+			} else {
+				// No selection and no focus, can't delete anything
+				setStatus("No message selected for deletion.");
+				return;
+			}
 		}
-		else {
-			prompt = "Are you sure you want to delete all " + allSelectedRowNumbers.size() + " rows?"; 
-		}
+		
+		// Standardized prompt for all cases
+		int messageCount = allSelectedRowNumbers.size();
+		String prompt = "Are you sure you want to delete " + messageCount + " message" + (messageCount == 1 ? "?" : "s?");
 		
 		int response = JOptionPane.showConfirmDialog(dialog, prompt, "Confirmation", JOptionPane.YES_NO_OPTION);
         if (response == JOptionPane.YES_OPTION) {
