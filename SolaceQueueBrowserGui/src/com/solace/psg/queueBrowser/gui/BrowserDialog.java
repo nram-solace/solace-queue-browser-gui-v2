@@ -262,7 +262,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		int totalTableWidth = 1480;
 		// Create the dialog
 		String versionStr = config != null ? config.version : "v2.0.2";
-		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue + " [" + versionStr + "]", true);
+		dialog = new JDialog(parentFrame, "SolQ!BAM - " + this.queue, true);
 		logBoth("*** run: Dialog created, about to set visible ***");
 		dialog.setSize(1600, 1200);
 		dialog.setLayout(new BorderLayout());
