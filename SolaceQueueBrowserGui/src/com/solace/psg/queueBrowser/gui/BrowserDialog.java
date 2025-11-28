@@ -427,9 +427,11 @@ public class BrowserDialog implements IDragDropInstigator {
 		selectAllCheckBox = new JCheckBox();
 		selectAllCheckBox.setToolTipText("Select/Deselect all messages");
 		selectAllCheckBox.setHorizontalAlignment(SwingConstants.CENTER);
-		selectAllCheckBox.addActionListener(new ActionListener() {
+		
+		// Method to handle checkbox toggle
+		Runnable toggleAllMessages = new Runnable() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void run() {
 				// Skip if we're updating programmatically
 				if (updatingSelectAllCheckBox) {
 					return;
@@ -453,18 +455,33 @@ public class BrowserDialog implements IDragDropInstigator {
 				}
 				table.repaint();
 			}
+		};
+		
+		// Add action listener for when checkbox is clicked directly
+		selectAllCheckBox.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				toggleAllMessages.run();
+			}
 		});
 		
-		// Create a panel to hold the checkbox for the header
-		JPanel headerPanel = new JPanel(new BorderLayout());
-		headerPanel.add(selectAllCheckBox, BorderLayout.CENTER);
+		// Add mouse listener as backup (in case action listener doesn't fire)
+		selectAllCheckBox.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				toggleAllMessages.run();
+			}
+		});
 		
 		// Create custom header renderer for column 0 that displays the checkbox
+		// Note: The checkbox in the renderer won't be directly clickable, but we handle clicks via header mouse listener
 		TableCellRenderer headerCheckboxRenderer = new TableCellRenderer() {
 			@Override
 			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
 					boolean hasFocus, int row, int column) {
-				return headerPanel;
+				// Return the checkbox component for rendering
+				// The checkbox state will be updated programmatically via the header mouse listener
+				return selectAllCheckBox;
 			}
 		};
 		
@@ -477,14 +494,40 @@ public class BrowserDialog implements IDragDropInstigator {
         table.getColumnModel().getColumn(4).setPreferredWidth(remainindWidth/3);
         
         // Add mouse listener to header to handle clicks on column 0 (checkbox column)
+        // This handles clicks anywhere in the header column, including on the checkbox
         JTableHeader header = table.getTableHeader();
         header.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int col = header.columnAtPoint(e.getPoint());
-                if (col == 0 && selectAllCheckBox != null) {
-                    // Toggle the checkbox when header is clicked
-                    selectAllCheckBox.setSelected(!selectAllCheckBox.isSelected());
+                if (col == 0 && selectAllCheckBox != null && table.getRowCount() > 0) {
+                    // Skip if we're updating programmatically
+                    if (updatingSelectAllCheckBox) {
+                        return;
+                    }
+                    
+                    // Toggle the checkbox state
+                    boolean newValue = !selectAllCheckBox.isSelected();
+                    updatingSelectAllCheckBox = true;
+                    selectAllCheckBox.setSelected(newValue);
+                    updatingSelectAllCheckBox = false;
+                    
+                    // Update state and all row checkboxes
+                    currentSelectAllState = newValue ? eSelectAllState.eSelectedAll : eSelectAllState.eSelectedNone;
+                    
+                    for (int row = 0; row < table.getRowCount(); row++) {
+                        table.setValueAt(newValue, row, 0);
+                    }
+                    
+                    // Update row selection
+                    table.clearSelection();
+                    if (newValue) {
+                        table.setRowSelectionInterval(0, table.getRowCount() - 1);
+                        setStatus(table.getRowCount() + " messages selected");
+                    } else {
+                        setStatus("De-selected all messages");
+                    }
+                    table.repaint();
                 }
             }
         });
