@@ -54,8 +54,10 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 
 import com.solace.psg.brokers.Broker;
 import com.solace.psg.brokers.BrokerException;
@@ -384,7 +386,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		topPanel.add(headerLabel, BorderLayout.NORTH);
 		
 		String[][] data = new String[][] {};
-		String[] columnNames = { "Checkbox", "", "Message Id", "Size", "Redelivered?" };
+		String[] columnNames = { "", "", "Message Id", "Size", "Redelivered?" };
 
 		// Create the table model
 		tableModel = new DefaultTableModel(data, columnNames) {
@@ -421,12 +423,71 @@ public class BrowserDialog implements IDragDropInstigator {
 		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
 		table.getColumnModel().getColumn(1).setCellRenderer(iconCellRenderer);
 		
+		// Create select-all checkbox for header
+		selectAllCheckBox = new JCheckBox();
+		selectAllCheckBox.setToolTipText("Select/Deselect all messages");
+		selectAllCheckBox.setHorizontalAlignment(SwingConstants.CENTER);
+		selectAllCheckBox.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// Skip if we're updating programmatically
+				if (updatingSelectAllCheckBox) {
+					return;
+				}
+				
+				boolean newValue = selectAllCheckBox.isSelected();
+				currentSelectAllState = newValue ? eSelectAllState.eSelectedAll : eSelectAllState.eSelectedNone;
+				
+				// Update all row checkboxes
+				for (int row = 0; row < table.getRowCount(); row++) {
+					table.setValueAt(newValue, row, 0);
+				}
+				
+				// Update row selection
+				table.clearSelection();
+				if (newValue) {
+					table.setRowSelectionInterval(0, table.getRowCount() - 1);
+					setStatus(table.getRowCount() + " messages selected");
+				} else {
+					setStatus("De-selected all messages");
+				}
+				table.repaint();
+			}
+		});
+		
+		// Create a panel to hold the checkbox for the header
+		JPanel headerPanel = new JPanel(new BorderLayout());
+		headerPanel.add(selectAllCheckBox, BorderLayout.CENTER);
+		
+		// Create custom header renderer for column 0 that displays the checkbox
+		TableCellRenderer headerCheckboxRenderer = new TableCellRenderer() {
+			@Override
+			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+					boolean hasFocus, int row, int column) {
+				return headerPanel;
+			}
+		};
+		
+		table.getColumnModel().getColumn(0).setHeaderRenderer(headerCheckboxRenderer);
 		table.getColumnModel().getColumn(0).setPreferredWidth(36);
 		table.getColumnModel().getColumn(1).setPreferredWidth(36);
 		int remainindWidth = totalTableWidth - 72;
         table.getColumnModel().getColumn(2).setPreferredWidth(remainindWidth/3);
         table.getColumnModel().getColumn(3).setPreferredWidth(remainindWidth/3);
         table.getColumnModel().getColumn(4).setPreferredWidth(remainindWidth/3);
+        
+        // Add mouse listener to header to handle clicks on column 0 (checkbox column)
+        JTableHeader header = table.getTableHeader();
+        header.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int col = header.columnAtPoint(e.getPoint());
+                if (col == 0 && selectAllCheckBox != null) {
+                    // Toggle the checkbox when header is clicked
+                    selectAllCheckBox.setSelected(!selectAllCheckBox.isSelected());
+                }
+            }
+        });
         
 		// Enable gridlines with very light color
 		table.setShowGrid(true);
@@ -462,72 +523,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 		
-		JTableHeader header = table.getTableHeader();
-		header.addMouseListener(new MouseAdapter() {
-		    @Override
-		    public void mouseClicked(MouseEvent e) {
-		        int col = header.columnAtPoint(e.getPoint());
-		        if (col == 0) { 
-		        	boolean newValue = true; 
-		        	if (currentSelectAllState == eSelectAllState.eSelectedAll) {
-		        		newValue = false;
-		        		currentSelectAllState = eSelectAllState.eSelectedNone;
-		        	setStatus("De-selected all messages");
-		        	}
-		        	else {
-		        		currentSelectAllState = eSelectAllState.eSelectedAll;
-		        		setStatus(table.getRowCount() + " messages selected");
-		        	}
-		            for (int row = 0; row < table.getRowCount(); row++) {
-		                table.setValueAt(newValue, row, col);
-		            }
-		            table.clearSelection();
-		            if (newValue) {
-		            	table.setRowSelectionInterval(0, table.getRowCount() - 1);
-		            }
-		            // Update the select-all checkbox state
-		            if (selectAllCheckBox != null) {
-		            	selectAllCheckBox.setSelected(newValue);
-		            }
-		            table.repaint();
-		        }
-		    }
-		});
-
-		// Create select-all checkbox for top-left corner
-		selectAllCheckBox = new JCheckBox();
-		selectAllCheckBox.setToolTipText("Select/Deselect all messages");
-		selectAllCheckBox.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// Skip if we're updating programmatically
-				if (updatingSelectAllCheckBox) {
-					return;
-				}
-				
-				boolean newValue = selectAllCheckBox.isSelected();
-				currentSelectAllState = newValue ? eSelectAllState.eSelectedAll : eSelectAllState.eSelectedNone;
-				
-				// Update all row checkboxes
-				for (int row = 0; row < table.getRowCount(); row++) {
-					table.setValueAt(newValue, row, 0);
-				}
-				
-				// Update row selection
-				table.clearSelection();
-				if (newValue) {
-					table.setRowSelectionInterval(0, table.getRowCount() - 1);
-					setStatus(table.getRowCount() + " messages selected");
-				} else {
-					setStatus("De-selected all messages");
-				}
-				table.repaint();
-			}
-		});
-
 		JScrollPane listScrollPane = new JScrollPane(table);
-		// Set the checkbox as the corner component (top-left corner)
-		listScrollPane.setCorner(JScrollPane.UPPER_LEFT_CORNER, selectAllCheckBox);
 		listScrollPane.setPreferredSize(new Dimension(380, 400));
 		topPanel.add(listScrollPane, BorderLayout.CENTER);
 
