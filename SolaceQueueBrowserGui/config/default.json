@@ -1,7 +1,7 @@
 {
 	"eventBrokers": [
 		{
-			"name": "Local Default Broker",
+			"name": "Local Default",
 			"sempHost": "http://localhost:8080/SEMP/v2/config",
 			"sempAdminUser": "admin",
 			"sempAdminPw": "admin",
@@ -11,7 +11,7 @@
 			"messagingPw": "default"
 		}, 
 		{
-			"name": "Local Test Broker",
+			"name": "Local Test",
 			"sempHost": "http://localhost:8080/SEMP/v2/config",
 			"sempAdminUser": "admin",
 			"sempAdminPw": "admin",
@@ -19,7 +19,17 @@
 			"messagingHost": "tcp://localhost:55333",
 			"messagingClientUsername": "default",
 			"messagingPw": "default"
-		}
+		},
+		{
+            "name": "NVIDIA AEM POC",
+            "sempHost": "https://mr-connection-2bygqpfpkzd.messaging.solace.cloud:943/SEMP/v2/config",
+            "sempAdminUser": "nvidia-eis-service-admin",
+            "sempAdminPw": "43aibk798hha8jik13lntrhffe",
+            "msgVpnName": "nvidia-eis-service",
+            "messagingHost": "tcps://mr-connection-2bygqpfpkzd.messaging.solace.cloud:55443",
+            "messagingClientUsername": "nram",
+            "messagingPw" : "nram12#"
+        }
 	],
 	"downloadFolder": "./downloads",
 	"ui": {

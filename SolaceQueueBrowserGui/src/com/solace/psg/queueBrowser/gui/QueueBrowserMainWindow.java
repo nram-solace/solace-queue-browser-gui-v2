@@ -76,6 +76,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private JButton browseButton;
 	private JButton copyAllButton;
 	private JButton deleteAllButton;
+	private JButton exitButton;
 
 	private IconicTableCellRenderer iconCellRenderer;
 	JLabel qIconlabel; 
@@ -339,7 +340,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			textScrollPane.setBorder(new EmptyBorder(4, 4, 4, 4)); // Top, Left, Bottom, Right
 
 			buttonPanel = new JPanel();
-			buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+			buttonPanel.setLayout(new BorderLayout());
 			browseButton = new JButton("Browse");
 			browseButton.setEnabled(false);
 			browseButton.setBackground(new Color(240, 230, 255)); // Soft purple background
@@ -395,13 +396,29 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 
+			// Create Exit button with soft red background
+			String headerFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			exitButton = new JButton("Exit");
+			exitButton.setBackground(new Color(220, 150, 150)); // Very soft red
+			exitButton.setForeground(Color.WHITE);
+			exitButton.setFont(new Font(headerFontFamily, Font.BOLD, 14));
+			exitButton.setPreferredSize(new Dimension(80, 30));
+			exitButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// Clean exit - dispose frame and exit application
+					frame.dispose();
+					System.exit(0);
+				}
+			});
+
 			this.addButtons(buttonPanel);
 
 			JLabel iconLabel = new JLabel("");
 			iconLabel.setIcon(headerIcon);
 
 			// Use Serif font like the queue details panel for consistency
-			String headerFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			// headerFontFamily is already defined above for the Exit button
 			
 			// Create top panel with horizontal layout: icon, broker selector, and connection info
 			JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4)); // 8px horizontal gap, 4px vertical gap
@@ -1030,13 +1047,23 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		return(String) table.getValueAt(table.getSelectedRow(), 1);
 	}
 	private void addButtons(JPanel buttonPanel) {
-		buttonPanel.add(browseButton);
-		buttonPanel.add(new JLabel("  |  "));
-		buttonPanel.add(copyAllButton);
-		buttonPanel.add(moveAllButton);
-		buttonPanel.add(deleteAllButton);
-		buttonPanel.add(new JLabel("  |  "));
-		buttonPanel.add(refreshButton);
+		// Create left panel for main buttons
+		JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		leftButtonPanel.add(browseButton);
+		leftButtonPanel.add(new JLabel("  |  "));
+		leftButtonPanel.add(copyAllButton);
+		leftButtonPanel.add(moveAllButton);
+		leftButtonPanel.add(deleteAllButton);
+		leftButtonPanel.add(new JLabel("  |  "));
+		leftButtonPanel.add(refreshButton);
+		
+		// Create right panel for Exit button
+		JPanel rightButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+		rightButtonPanel.add(exitButton);
+		
+		// Add panels to buttonPanel using BorderLayout
+		buttonPanel.add(leftButtonPanel, BorderLayout.WEST);
+		buttonPanel.add(rightButtonPanel, BorderLayout.EAST);
 	}
 
 	private void onBrowse(String queueName, JFrame frame) throws SempException, JCSMPException {
@@ -1274,8 +1301,33 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		textArea2.setText(display);
 		qIconlabel.setVisible(true);
 		
+		// Enable buttons before removing/re-adding (they will be re-enabled after)
+		browseButton.setEnabled(true);
+		copyAllButton.setEnabled(true);
+		deleteAllButton.setEnabled(true);
+		moveAllButton.setEnabled(true);
+		
 		buttonPanel.removeAll();
 		this.addButtons(buttonPanel);
+		
+		// Ensure buttons remain enabled after being re-added
+		// Do it immediately and also in invokeLater to be safe
+		browseButton.setEnabled(true);
+		copyAllButton.setEnabled(true);
+		deleteAllButton.setEnabled(true);
+		moveAllButton.setEnabled(true);
+		
+		SwingUtilities.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				browseButton.setEnabled(true);
+				copyAllButton.setEnabled(true);
+				deleteAllButton.setEnabled(true);
+				moveAllButton.setEnabled(true);
+				buttonPanel.revalidate();
+				buttonPanel.repaint();
+			}
+		});
 
 //        // any spec on where this can move to?
 //        List<String> destinations = getMovementDestinationsFor(queueName);
