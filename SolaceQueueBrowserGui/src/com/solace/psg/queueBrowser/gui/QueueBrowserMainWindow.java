@@ -185,26 +185,42 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
 			table.getColumnModel().getColumn(0).setCellRenderer(iconCellRenderer);
 			table.getColumnModel().getColumn(0).setMaxWidth(48);
+			// Use ListSelectionListener for reliable single-click selection
+			// This handles selection changes regardless of how they occur (mouse, keyboard, programmatic)
+			table.getSelectionModel().addListSelectionListener(e -> {
+				if (!e.getValueIsAdjusting()) { // Only process when selection is finalized
+					int row = table.getSelectedRow();
+					if (row >= 0 && row < table.getRowCount()) {
+						onSelectQueue(table, row);
+					}
+				}
+			});
+			
+			// Handle double-click to browse
 			table.addMouseListener(new MouseAdapter() {
 				@Override
-				public void mouseClicked(MouseEvent e) {
+				public void mousePressed(MouseEvent e) {
 					int row = table.rowAtPoint(e.getPoint());
-					onSelectQueue(table, row);
+					if (row >= 0 && row < table.getRowCount()) {
+						// Ensure table has focus for proper selection
+						table.requestFocus();
+						
+						// Handle double-click
+						if (e.getClickCount() == 2) {
+							System.out.println("Double-clicked row: " + row);
+							try {
+								// Ensure selection is set before browsing
+								if (table.getSelectedRow() != row) {
+									table.setRowSelectionInterval(row, row);
+								}
+								onBrowse(selectedQueue, frame);
+							} catch (JCSMPException | SempException e1 ) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						}
+					}
 				}
-				@Override
-			    public void mousePressed(MouseEvent e) {
-			        if (e.getClickCount() == 2) {
-			            int row = table.rowAtPoint(e.getPoint());
-			            System.out.println("Double-clicked row: " + row);
-						try {
-							onBrowse(selectedQueue, frame);
-						} catch (JCSMPException | SempException e1 ) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} 
-			        }
-			    }
-
 			});
 	        table.setTransferHandler(new QueueMessageTransferReceiverHandler(this, "target-Q"));
 	        table.getActionMap().put("upArrow", new AbstractAction() {
@@ -416,7 +432,21 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 
 	private void onSelectQueue(JTable table, int row) {
+		// Ensure row is valid and selected
+		if (row < 0 || row >= table.getRowCount()) {
+			return;
+		}
+		
+		// Ensure the row is actually selected in the table
+		if (table.getSelectedRow() != row) {
+			table.setRowSelectionInterval(row, row);
+		}
+		
 		selectedQueue = getSelectedQueue();
+		if (selectedQueue == null) {
+			return;
+		}
+		
 		browseButton.setEnabled(true);
 		copyAllButton.setEnabled(true);
 		deleteAllButton.setEnabled(true);
