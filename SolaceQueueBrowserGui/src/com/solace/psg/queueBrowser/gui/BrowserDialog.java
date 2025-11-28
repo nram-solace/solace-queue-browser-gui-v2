@@ -912,50 +912,93 @@ public class BrowserDialog implements IDragDropInstigator {
 	
 	private void moveOrCopy(boolean deleteFromSource) {
 		ArrayList<String> ids = getAllSelectedMessageIds();
+		ArrayList<String> successfulIds = new ArrayList<String>();
+		ArrayList<String> failedIds = new ArrayList<String>();
+		
 		if (ids.size() > 1) {
 			for (String id : ids) {
-				moveOrCopyMessage(id, deleteFromSource, false);
+				try {
+					moveOrCopyMessage(id, deleteFromSource, false);
+					successfulIds.add(id);
+				} catch (Exception e) {
+					failedIds.add(id);
+					logger.error("Failed to " + (deleteFromSource ? "move" : "copy") + " message " + id, e);
+				}
 			}
 			String action = "copied";
 			if (deleteFromSource == true) {
 				action = "moved";
 			}
 			String selectedTargetQueue = (String) comboBox.getSelectedItem();
+			
+			// Show confirmation dialog
+			String message;
+			if (failedIds.isEmpty()) {
+				message = successfulIds.size() + " message" + (successfulIds.size() == 1 ? "" : "s") + 
+					" successfully " + action + " to queue '" + selectedTargetQueue + "'.";
+			} else {
+				message = successfulIds.size() + " message" + (successfulIds.size() == 1 ? "" : "s") + 
+					" successfully " + action + " to queue '" + selectedTargetQueue + "'.\n" +
+					failedIds.size() + " message" + (failedIds.size() == 1 ? "" : "s") + " failed.";
+			}
+			JOptionPane.showMessageDialog(dialog, message, 
+				"Operation Complete", JOptionPane.INFORMATION_MESSAGE);
+			
 			setStatus(ids.size() + " messages were " + action+ " to " + selectedTargetQueue);
 
 			// Update the display to remove all moved messages
 			if (deleteFromSource) {
-				updateDisplayAfterMultipleDeletes(ids);
+				updateDisplayAfterMultipleDeletes(successfulIds);
+			} else {
+				// For copy operations, unselect the messages
+				unselectMessages(ids);
 			}
 		}
 		else {
 			String id = ids.get(0);
-			moveOrCopyMessage(id, deleteFromSource, true);
+			try {
+				moveOrCopyMessage(id, deleteFromSource, true);
+				String action = deleteFromSource ? "moved" : "copied";
+				String selectedTargetQueue = (String) comboBox.getSelectedItem();
+				
+				// Show confirmation dialog
+				String message = "Message " + id + " successfully " + action + 
+					" to queue '" + selectedTargetQueue + "'.";
+				JOptionPane.showMessageDialog(dialog, message, 
+					"Operation Complete", JOptionPane.INFORMATION_MESSAGE);
+				
+				// For copy operations, unselect the message
+				if (!deleteFromSource) {
+					unselectMessages(ids);
+				}
+			} catch (Exception e) {
+				String action = deleteFromSource ? "move" : "copy";
+				JOptionPane.showMessageDialog(dialog, 
+					"Failed to " + action + " message " + id + ".\n" + e.getMessage(),
+					"Operation Failed", JOptionPane.ERROR_MESSAGE);
+				logger.error("Failed to " + action + " message " + id, e);
+			}
 		}
 	}
-	private void moveOrCopyMessage(String id, boolean deleteFromSource, boolean showStatus) {
+	private void moveOrCopyMessage(String id, boolean deleteFromSource, boolean showStatus) throws SempException {
 		String selectedTargetQueue = (String) comboBox.getSelectedItem();
 
 		BytesXMLMessage msg = browser.get(id);
 		ReplicationGroupMessageId replicationId = msg.getReplicationGroupMessageId();
-		try {
-			sempV2ActionClient.copy(broker.msgVpnName, queue, selectedTargetQueue, replicationId.toString());
+		sempV2ActionClient.copy(broker.msgVpnName, queue, selectedTargetQueue, replicationId.toString());
 
-			String action = "copied";
-			if (deleteFromSource == true) {
-				action = "moved";
-			}
-			String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + action +
-					" from the '" + this.queue + "' queue to the '" + selectedTargetQueue + "'.";
-			CommandLog.instance().log(logMsg);
-
-			if (showStatus) {
-				setStatus (logMsg);
-			}
-
-		} catch (SempException e1) {
-			e1.printStackTrace();
+		String action = "copied";
+		if (deleteFromSource == true) {
+			action = "moved";
 		}
+		String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + action +
+				" from the '" + this.queue + "' queue to the '" + selectedTargetQueue + "'.";
+		CommandLog.instance().log(logMsg);
+
+		if (showStatus) {
+			setStatus (logMsg);
+		}
+		
 		if (deleteFromSource) {
 			browser.delete(id);
 			// For single message moves, remove the row immediately
@@ -1051,65 +1094,104 @@ public class BrowserDialog implements IDragDropInstigator {
 
 	private void onDownloadMessage() {
 		ArrayList<String> ids = getAllSelectedMessageIds();
+		ArrayList<String> successfulIds = new ArrayList<String>();
+		ArrayList<String> failedIds = new ArrayList<String>();
+		
 		if (ids.size() > 1) {
 			for (String id : ids) {
-				downloadMessage(id, false);
+				try {
+					downloadMessage(id, false);
+					successfulIds.add(id);
+				} catch (Exception e) {
+					failedIds.add(id);
+					logger.error("Failed to download message " + id, e);
+				}
 			}
+			
+			// Show confirmation dialog
+			String message;
+			if (failedIds.isEmpty()) {
+				message = successfulIds.size() + " message" + (successfulIds.size() == 1 ? "" : "s") + 
+					" successfully downloaded to:\n" + this.downloadFolder;
+			} else {
+				message = successfulIds.size() + " message" + (successfulIds.size() == 1 ? "" : "s") + 
+					" successfully downloaded to:\n" + this.downloadFolder + "\n\n" +
+					failedIds.size() + " message" + (failedIds.size() == 1 ? "" : "s") + " failed.";
+			}
+			JOptionPane.showMessageDialog(dialog, message, 
+				"Download Complete", JOptionPane.INFORMATION_MESSAGE);
+			
 			setStatus(ids.size() + " messages were downloaded to " + this.downloadFolder);
+			
+			// Unselect the downloaded messages
+			unselectMessages(ids);
 		}
 		else {
 			String id = ids.get(0);
-			downloadMessage(id, true);
+			try {
+				String zipFileName = downloadMessage(id, true);
+				
+				// Show confirmation dialog
+				String message = "Message " + id + " successfully downloaded to:\n" + zipFileName;
+				JOptionPane.showMessageDialog(dialog, message, 
+					"Download Complete", JOptionPane.INFORMATION_MESSAGE);
+				
+				// Unselect the downloaded message
+				unselectMessages(ids);
+			} catch (Exception e) {
+				JOptionPane.showMessageDialog(dialog, 
+					"Failed to download message " + id + ".\n" + e.getMessage(),
+					"Download Failed", JOptionPane.ERROR_MESSAGE);
+				logger.error("Failed to download message " + id, e);
+			}
 		}
 	}
 	
-	private void downloadMessage(String id, boolean showStatus) {
-		try {
-			//String id = getMessageIdOfSelectedRow();
-			BytesXMLMessage message = this.browser.get(id);
-			String payload = browser.getPayload(message);
-			String[][] headers = getMessageHeadersData(message);
-			String[][] userProps = getMessageUserPropsData(message);
-			
-			String folder = this.downloadFolder;
-			makeDirIfRequired(folder);
-			
-			String payloadFile = folder + "/payload.txt"; 
-			writeStringToFile(payloadFile, payload);
-			
-			payload = propsAsString(headers);
-			String headersFile = folder + "/headers.txt"; 
-			writeStringToFile(headersFile, payload);
+	private String downloadMessage(String id, boolean showStatus) throws Exception {
+		//String id = getMessageIdOfSelectedRow();
+		BytesXMLMessage message = this.browser.get(id);
+		String payload = browser.getPayload(message);
+		String[][] headers = getMessageHeadersData(message);
+		String[][] userProps = getMessageUserPropsData(message);
+		
+		String folder = this.downloadFolder;
+		makeDirIfRequired(folder);
+		
+		String payloadFile = folder + "/payload.txt"; 
+		writeStringToFile(payloadFile, payload);
+		
+		payload = propsAsString(headers);
+		String headersFile = folder + "/headers.txt"; 
+		writeStringToFile(headersFile, payload);
 
-			payload = propsAsString(userProps);
-			String userPropsFile = folder + "/userProps.txt"; 
-			writeStringToFile(userPropsFile, payload);
+		payload = propsAsString(userProps);
+		String userPropsFile = folder + "/userProps.txt"; 
+		writeStringToFile(userPropsFile, payload);
 
-			//StringBuilder sb = new StringBuilder();
-			String context = this.broker.name + "-" + this.broker.msgVpnName;
-			Instant when = Instant.now();
-			long lWhen = when.toEpochMilli();
-			
-			String zipFileName = folder + "/" + context + "-" + "msg-" + id + "-" + lWhen + ".zip";
+		//StringBuilder sb = new StringBuilder();
+		String context = this.broker.name + "-" + this.broker.msgVpnName;
+		Instant when = Instant.now();
+		long lWhen = when.toEpochMilli();
+		
+		String zipFileName = folder + "/" + context + "-" + "msg-" + id + "-" + lWhen + ".zip";
 
-	        FileOutputStream fos = new FileOutputStream(zipFileName);
-            ZipOutputStream zipOut = new ZipOutputStream(fos);
-            addToZip(zipOut, payloadFile);
-            addToZip(zipOut, headersFile);
-            addToZip(zipOut, userPropsFile);
-            zipOut.close();
-            fos.close();
+        FileOutputStream fos = new FileOutputStream(zipFileName);
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+        addToZip(zipOut, payloadFile);
+        addToZip(zipOut, headersFile);
+        addToZip(zipOut, userPropsFile);
+        zipOut.close();
+        fos.close();
 
-            deleteFile(payloadFile);
-            deleteFile(headersFile);
-            deleteFile(userPropsFile);
-            
-            if (showStatus) {
-            	setStatus("Downloaded message " + id + " to " + zipFileName) ;
-            }
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        deleteFile(payloadFile);
+        deleteFile(headersFile);
+        deleteFile(userPropsFile);
+        
+        if (showStatus) {
+        	setStatus("Downloaded message " + id + " to " + zipFileName) ;
+        }
+        
+        return zipFileName;
 	}
 	private void addToZip(ZipOutputStream zipOut, String srcFile) throws IOException {
         File fileToZip = new File(srcFile);
@@ -1146,6 +1228,29 @@ public class BrowserDialog implements IDragDropInstigator {
     	return ids;
 	}
 	
+	/**
+	 * Unselects messages by clearing their checkboxes and row selection
+	 * @param ids List of message IDs to unselect
+	 */
+	private void unselectMessages(ArrayList<String> ids) {
+		// Clear checkboxes for the specified message IDs
+		for (int row = 0; row < table.getRowCount(); row++) {
+			String id = (String) table.getValueAt(row, nIdColumn);
+			if (ids.contains(id)) {
+				table.setValueAt(false, row, 0);
+			}
+		}
+		
+		// Clear row selection
+		table.clearSelection();
+		
+		// Update select-all checkbox state
+		updateSelectAllCheckBoxState();
+		
+		// Reset selection state
+		currentSelectAllState = eSelectAllState.eIndeterminant;
+	}
+	
 	private void onDeleteMessage(JTable table, Component dialog) {
 		ArrayList<Integer> allSelectedRowNumbers = getAllSelectedRows();
 		
@@ -1168,12 +1273,21 @@ public class BrowserDialog implements IDragDropInstigator {
 		int response = JOptionPane.showConfirmDialog(dialog, prompt, "Confirmation", JOptionPane.YES_NO_OPTION);
         if (response == JOptionPane.YES_OPTION) {
     		ArrayList<String> ids = new ArrayList<String>();
+    		ArrayList<String> successfulIds = new ArrayList<String>();
+    		ArrayList<String> failedIds = new ArrayList<String>();
+    		
         	for (Integer i : allSelectedRowNumbers) {
         		String id = (String) table.getValueAt(i, nIdColumn);
         		ids.add(id);
-            	this.browser.delete(id);
-            	String logMsg = "MessageId " + id + " was deleted from the '" + this.queue + "' queue.";
-    			CommandLog.instance().log(logMsg);
+        		try {
+        			this.browser.delete(id);
+        			String logMsg = "MessageId " + id + " was deleted from the '" + this.queue + "' queue.";
+        			CommandLog.instance().log(logMsg);
+        			successfulIds.add(id);
+        		} catch (Exception e) {
+        			failedIds.add(id);
+        			logger.error("Failed to delete message " + id, e);
+        		}
         	}
         	
         	// now update the GUI
@@ -1185,7 +1299,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	        		String id = (String) table.getValueAt(rowIter, nIdColumn);
 	        		
 	        		// was this message deleted?
-	        		for (String oneDeletedId : ids) {
+	        		for (String oneDeletedId : successfulIds) {
 	        			if (id.equals(oneDeletedId)) {
 	        				tableModel.removeRow(rowIter);
 	                		numberOfMessagesOnTheCurrentPage--;
@@ -1220,11 +1334,29 @@ public class BrowserDialog implements IDragDropInstigator {
         		clearMessageSelection();
         	}
         	
-        	// Update status
-        	if (ids.size() == 1) {
-        		setStatus("Message " + ids.get(0) + " was deleted.");
+        	// Show confirmation dialog
+        	String message;
+        	if (failedIds.isEmpty()) {
+        		if (successfulIds.size() == 1) {
+        			message = "Message " + successfulIds.get(0) + " successfully deleted from queue '" + this.queue + "'.";
+        		} else {
+        			message = successfulIds.size() + " messages successfully deleted from queue '" + this.queue + "'.";
+        		}
+        		JOptionPane.showMessageDialog(dialog, message, 
+        			"Deletion Complete", JOptionPane.INFORMATION_MESSAGE);
         	} else {
-        		setStatus(ids.size() + " messages were deleted.");
+        		message = successfulIds.size() + " message" + (successfulIds.size() == 1 ? "" : "s") + 
+        			" successfully deleted from queue '" + this.queue + "'.\n" +
+        			failedIds.size() + " message" + (failedIds.size() == 1 ? "" : "s") + " failed to delete.";
+        		JOptionPane.showMessageDialog(dialog, message, 
+        			"Deletion Complete", JOptionPane.WARNING_MESSAGE);
+        	}
+        	
+        	// Update status
+        	if (successfulIds.size() == 1) {
+        		setStatus("Message " + successfulIds.get(0) + " was deleted.");
+        	} else {
+        		setStatus(successfulIds.size() + " messages were deleted.");
         	}
         	
 //        	for (Integer i : all) {
