@@ -108,6 +108,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	private static final int nIdColumn = 2;
 	
 	private int estimatedPageCount = 0;
+	private int estimatedTotalMessageCount = 0; // Store the original message count from main window
 
 	private JLabel topLabel;
 	private JLabel filterStatusLabel;
@@ -159,6 +160,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		this.otherQueues = otherQueues;
 		this.parentFrame = frame;
 		this.broker = b;
+		this.estimatedTotalMessageCount = nEstimatedMessageCount;
 		this.estimatedPageCount = (nEstimatedMessageCount / nItemsPerPage) + 1;
 		this.iconCellRenderer = new IconicTableCellRenderer();
 		this.messageIcon = new ImageIcon("config/messageIcon32.png");
@@ -304,6 +306,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		    if (selectedValue != nItemsPerPage) {
 		    	nItemsPerPage = selectedValue; 
 			    //System.out.println("Selected: " + nItemsPerPage);
+		    	// Browser will be recreated in onRefresh() with new page size
 		    	onRefresh();
 		    }
 		});
@@ -854,6 +857,9 @@ public class BrowserDialog implements IDragDropInstigator {
 		logBoth("*** restartAfterFilter: Calling onNextPage() ***");
 		onNextPage(dialog, tableModel, nextPageButton);
 		logBoth("*** restartAfterFilter: onNextPage() completed ***");
+		
+		// Recalculate page count after refresh/filter
+		recalculateEstimatedPageCount();
 
 		spinner.setVisible(false);
 		logBoth("*** FUNCTION CALL: restartAfterFilter('" + title + "') - END ***");
@@ -948,7 +954,10 @@ public class BrowserDialog implements IDragDropInstigator {
 
 			// Update the display to remove all moved messages
 			if (deleteFromSource) {
+				// Update estimated total message count by subtracting moved messages
+				estimatedTotalMessageCount = Math.max(0, estimatedTotalMessageCount - successfulIds.size());
 				updateDisplayAfterMultipleDeletes(successfulIds);
+				// Recalculation is done in updateDisplayAfterMultipleDeletes
 			} else {
 				// For copy operations, unselect the messages
 				unselectMessages(ids);
@@ -1008,6 +1017,10 @@ public class BrowserDialog implements IDragDropInstigator {
 					tableModel.removeRow(selectedRow);
 					numberOfMessagesOnTheCurrentPage--;
 				}
+				// Update estimated total message count by subtracting moved message
+				estimatedTotalMessageCount = Math.max(0, estimatedTotalMessageCount - 1);
+				// Recalculate page count after message move
+				recalculateEstimatedPageCount();
 			}
 		}
 	}
@@ -1054,6 +1067,12 @@ public class BrowserDialog implements IDragDropInstigator {
 		} else {
 			clearMessageSelection();
 		}
+		
+		// Update estimated total message count by subtracting deleted messages
+		estimatedTotalMessageCount = Math.max(0, estimatedTotalMessageCount - ids.size());
+		
+		// Recalculate page count after deletions
+		recalculateEstimatedPageCount();
 	}
 	
 	private String propsAsString(String[][] props) {
@@ -1334,6 +1353,12 @@ public class BrowserDialog implements IDragDropInstigator {
         		clearMessageSelection();
         	}
         	
+        	// Update estimated total message count by subtracting deleted messages
+        	estimatedTotalMessageCount = Math.max(0, estimatedTotalMessageCount - successfulIds.size());
+        	
+        	// Recalculate page count after deletions
+        	recalculateEstimatedPageCount();
+        	
         	// Show confirmation dialog
         	String message;
         	if (failedIds.isEmpty()) {
@@ -1387,6 +1412,12 @@ public class BrowserDialog implements IDragDropInstigator {
 		if (selectedRow != -1) {
 			tableModel.removeRow(selectedRow);
 		}
+
+		// Update estimated total message count by subtracting deleted message
+		estimatedTotalMessageCount = Math.max(0, estimatedTotalMessageCount - 1);
+		
+		// Recalculate page count after deletion
+		recalculateEstimatedPageCount();
 
 		if (numberOfMessagesOnTheCurrentPage == 0) {
 			// this is the only message, thing else to select
@@ -1649,6 +1680,28 @@ public class BrowserDialog implements IDragDropInstigator {
 		textArea.setText("");
 		logBoth("*** onPageChange: textArea cleared ***");
 	}
+	
+	/**
+	 * Recalculate the estimated page count based on the message count from main window and current page size.
+	 * Uses the original estimated message count and adjusts for deletions/moves.
+	 */
+	private void recalculateEstimatedPageCount() {
+		// Use the stored message count from main window (adjusted for deletions/moves)
+		// Recalculate page count: (totalMessages / itemsPerPage) + 1
+		// Ensure at least 1 page even if no messages
+		if (estimatedTotalMessageCount > 0) {
+			estimatedPageCount = (estimatedTotalMessageCount / nItemsPerPage) + 1;
+		} else {
+			estimatedPageCount = 1;
+		}
+		
+		logBoth("*** recalculateEstimatedPageCount: estimatedTotalMessageCount=" + estimatedTotalMessageCount + 
+			", nItemsPerPage=" + nItemsPerPage + 
+			", new estimatedPageCount=" + estimatedPageCount + " ***");
+		
+		// Update the UI label
+		onPageChange();
+	}
 
 	private void display(DefaultTableModel tableModel, Object[][] dataUpdate) {
 		logBothWithThread("*** FUNCTION CALL: display() - START ***");
@@ -1727,6 +1780,10 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		onPageChange();
 		dialog.setCursor(Cursor.getDefaultCursor());
+		
+		// Recalculate page count after loading messages
+		recalculateEstimatedPageCount();
+		
 		SwingUtilities.invokeLater(() -> {
 			autoSelectFirstRow();
 		});
@@ -1803,6 +1860,9 @@ public class BrowserDialog implements IDragDropInstigator {
 		onPageChange();
 		dialog.setCursor(Cursor.getDefaultCursor());
 		logBoth("*** onNextPage: Cursor reset to default ***");
+		
+		// Recalculate page count after loading messages
+		recalculateEstimatedPageCount();
 
 		logBoth("*** onNextPage: Setting up invokeLater for autoSelectFirstRow and preFetch, rowCount = " + rowCount + " ***");
 		SwingUtilities.invokeLater(() -> {

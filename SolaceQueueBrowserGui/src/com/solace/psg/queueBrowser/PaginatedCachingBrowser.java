@@ -161,6 +161,14 @@ public class PaginatedCachingBrowser {
 	public boolean hasMoreAfterId(String lastIdAdded) {
 		return this.solaceBrowserObject.hasMoreAfterId(lastIdAdded);
 	}
+	
+	/**
+	 * Get the number of cached messages currently in the browser
+	 * @return The number of cached messages
+	 */
+	public int getCachedMessageCount() {
+		return this.allMessagesMap.size();
+	}
 
 	public void prefetchNextPage() throws BrokerException {
 		int nCount = 0;
