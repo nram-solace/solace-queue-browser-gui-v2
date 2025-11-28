@@ -49,6 +49,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -108,6 +109,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	private ImageIcon messageIcon;
 	private SempClient sempV2ActionClient;
 	private JComboBox<String> cboMsgsPerPage;
+	private Config config; // For UI settings
 
 	public Point mousePressPoint;
 	private FilterSpecification spec = new FilterSpecification();
@@ -123,7 +125,7 @@ public class BrowserDialog implements IDragDropInstigator {
 	private enum eSelectAllState {eIndeterminant, eSelectedAll, eSelectedNone};
 	private eSelectAllState currentSelectAllState = eSelectAllState.eIndeterminant; 
 	
-	public BrowserDialog(SempClient sempV2ActionClient, Broker b, String queue, JFrame frame, int nEstimatedMessageCount, String[] otherQueues, String downloadFolder) throws SempException {
+	public BrowserDialog(SempClient sempV2ActionClient, Broker b, String queue, JFrame frame, int nEstimatedMessageCount, String[] otherQueues, String downloadFolder, Config config) throws SempException {
 		this.queue = queue;
 		this.otherQueues = otherQueues;
 		this.parentFrame = frame;
@@ -133,6 +135,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		this.messageIcon = new ImageIcon("config/messageIcon32.png");
 		this.sempV2ActionClient = sempV2ActionClient;
 		this.downloadFolder = downloadFolder;
+		this.config = config != null ? config : new Config(""); // Fallback if null
 		//spec.bodyValue = "the text you seek";
 		
 		this.initialize();
@@ -142,12 +145,27 @@ public class BrowserDialog implements IDragDropInstigator {
 		this.browser = new PaginatedCachingBrowser(broker, this.queue, nItemsPerPage);
 		this.browser.setFilter(spec);
 	}
+	
+	/**
+	 * Get font from config or use FlatLaf default
+	 * @param size Font size
+	 * @param style Font style (Font.PLAIN, Font.BOLD, etc.)
+	 * @return Font instance
+	 */
+	private Font getFont(int size, int style) {
+		if (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) {
+			return new Font(config.fontFamily, style, size);
+		}
+		// Use FlatLaf default font (OS-agnostic)
+		return UIManager.getFont("Label.font").deriveFont(style, size);
+	}
 
 	@SuppressWarnings("serial")
 	void run() throws JCSMPException {
 		int totalTableWidth = 1480;
 		// Create the dialog
-		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue + " [feat/ui-improvements]", true);
+		String versionStr = config != null ? config.version : "v-nram-exp-cc-2.0";
+		dialog = new JDialog(parentFrame, "Solace Queue Browser - " + this.queue + " [" + versionStr + "]", true);
 		dialog.setSize(1600, 1200);
 		dialog.setLayout(new BorderLayout());
 		dialog.setModal(false);
@@ -155,7 +173,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		// Create the top panel
 		JPanel topPanel = new JPanel(new BorderLayout());
 
-		JButton refreshTopButton = new JButton("↻ Refresh");
+		JButton refreshTopButton = new JButton("Refresh");
         refreshTopButton.setBackground(new Color(220, 245, 255)); // Soft cyan background
         refreshTopButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -165,7 +183,7 @@ public class BrowserDialog implements IDragDropInstigator {
         
 
 		// Create filter button for top row
-		JButton filterTopButton = new JButton("▼ Filter");
+		JButton filterTopButton = new JButton("Filter");
 		filterTopButton.setEnabled(true);
 		filterTopButton.setBackground(new Color(240, 230, 255)); // Soft purple background
 		filterTopButton.addActionListener(new ActionListener() {
@@ -181,10 +199,10 @@ public class BrowserDialog implements IDragDropInstigator {
 		cboMsgsPerPage.setEditable(true);
 		cboMsgsPerPage.getEditor().getEditorComponent().addKeyListener(new KeyAdapter() {
 		    public void keyReleased(KeyEvent e) {
-		        String input = ((JTextField) comboBox.getEditor().getEditorComponent()).getText();
-		        for (int i = 0; i < comboBox.getItemCount(); i++) {
-		            if (comboBox.getItemAt(i).toString().startsWith(input)) {
-		                comboBox.setSelectedIndex(i);
+		        String input = ((JTextField) cboMsgsPerPage.getEditor().getEditorComponent()).getText();
+		        for (int i = 0; i < cboMsgsPerPage.getItemCount(); i++) {
+		            if (cboMsgsPerPage.getItemAt(i).toString().startsWith(input)) {
+		                cboMsgsPerPage.setSelectedIndex(i);
 		                break;
 		            }
 		        }
@@ -220,29 +238,58 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
+		// Use improved topRowPanel layout from nram-dev but with Serif fonts
+		// Use Serif font like the queue details panel for consistency
+		String fontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : "Serif";
+		
 		// New top row layout: Browsing QUEUE_NAME | [<< Prev] Page N of ~ M [Next >>] | Page Size S | [Filter] (Status) | [Refresh]
 		String filterStatus = spec.isEmpty() ? "OFF" : "ON";
 		JPanel topRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-		topRowPanel.add(new JLabel("<html><b>Browsing:</b> <span style='font-size:120%'>" + this.queue + "</span></html>"));
-		topRowPanel.add(new JLabel("|"));
+		
+		JLabel browsingLabel = new JLabel("Browsing: " + this.queue);
+		browsingLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(browsingLabel);
+		
+		JLabel separator1 = new JLabel("|");
+		separator1.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(separator1);
+		
 		topRowPanel.add(previousPageButton);
-		topLabel = new JLabel("<html><b>Page</b> <span style='font-size:120%'>" + nCurPage + "</span> <b>of ~</b> <span style='font-size:120%'>" + estimatedPageCount + "</span></html>");
+		
+		topLabel = new JLabel("Page " + nCurPage + " of ~ " + estimatedPageCount);
+		topLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
 		topRowPanel.add(topLabel);
+		
 		topRowPanel.add(nextPageButton);
-		topRowPanel.add(new JLabel("|"));
-		topRowPanel.add(new JLabel("<html><b>Page Size</b></html>"));
+		
+		JLabel separator2 = new JLabel("|");
+		separator2.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(separator2);
+		
+		JLabel pageSizeLabel = new JLabel("Page Size");
+		pageSizeLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(pageSizeLabel);
 		topRowPanel.add(cboMsgsPerPage);
-		topRowPanel.add(new JLabel("|"));
+		
+		JLabel separator3 = new JLabel("|");
+		separator3.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(separator3);
+		
 		topRowPanel.add(filterTopButton);
-		filterStatusLabel = new JLabel("<html><span style='font-size:120%'>(" + filterStatus + ")</span></html>");
+		
+		filterStatusLabel = new JLabel("(" + filterStatus + ")");
+		filterStatusLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
 		topRowPanel.add(filterStatusLabel);
-		topRowPanel.add(new JLabel("|"));
+		
+		JLabel separator4 = new JLabel("|");
+		separator4.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topRowPanel.add(separator4);
+		
 		topRowPanel.add(refreshTopButton);
 		topRowPanel.setBorder(new EmptyBorder(10, 20, 10, 20));
 
 		JPanel headerLabel = new JPanel(new BorderLayout());
 		headerLabel.add(topRowPanel, BorderLayout.CENTER);
-
 		
 		topPanel.add(headerLabel, BorderLayout.NORTH);
 		
@@ -347,7 +394,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		listScrollPane.setPreferredSize(new Dimension(380, 400));
 		topPanel.add(listScrollPane, BorderLayout.CENTER);
 
-		delButton = new JButton("✕ Delete");
+		delButton = new JButton("Delete");
 		delButton.setEnabled(false);
 		delButton.setBackground(new Color(255, 220, 220)); // Soft red background
 		delButton.addActionListener(new ActionListener() {
@@ -375,7 +422,7 @@ public class BrowserDialog implements IDragDropInstigator {
 				onPreviousMessage();
 			}
 		});
-		copyMessageMsgButton = new JButton("⎘ Copy");
+		copyMessageMsgButton = new JButton("Copy");
 		copyMessageMsgButton.setEnabled(false);
 		copyMessageMsgButton.setBackground(new Color(220, 235, 255)); // Soft blue background
 		copyMessageMsgButton.addActionListener(new ActionListener() {
@@ -385,7 +432,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
-		moveMessageMsgButton = new JButton("➜ Move");
+		moveMessageMsgButton = new JButton("Move");
 		moveMessageMsgButton.setEnabled(false);
 		moveMessageMsgButton.setBackground(new Color(255, 245, 220)); // Soft yellow background
 		moveMessageMsgButton.addActionListener(new ActionListener() {
@@ -399,7 +446,7 @@ public class BrowserDialog implements IDragDropInstigator {
         preferredSize.width = 400;
         comboBox.setPreferredSize(preferredSize);
 
-        downloadMessageMsgButton = new JButton("⬇ Download");
+        downloadMessageMsgButton = new JButton("Download");
         downloadMessageMsgButton.setEnabled(false);
         downloadMessageMsgButton.setBackground(new Color(220, 255, 220)); // Soft green background
         downloadMessageMsgButton.addActionListener(new ActionListener() {
@@ -409,18 +456,20 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
-		JPanel buttonLeftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+		JPanel buttonLeftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		buttonLeftPanel.add(prevMsgButton);
 		buttonLeftPanel.add(nextMsgButton);
-		buttonLeftPanel.add(new JLabel("|"));
-		buttonLeftPanel.add(copyMessageMsgButton);
 		buttonLeftPanel.add(moveMessageMsgButton);
-		buttonLeftPanel.add(new JLabel("Target Queue:"));
+		buttonLeftPanel.add(copyMessageMsgButton);
+		
+		// Add "Target Queue" label before comboBox
+		// Use the fontFamily already defined earlier in the method
+		JLabel targetQueueLabel = new JLabel("Target Queue");
+		targetQueueLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		buttonLeftPanel.add(targetQueueLabel);
 		buttonLeftPanel.add(comboBox);
-		buttonLeftPanel.add(new JLabel("|"));
-		buttonLeftPanel.add(delButton);
-		buttonLeftPanel.add(new JLabel("|"));
 		buttonLeftPanel.add(downloadMessageMsgButton);
+		buttonLeftPanel.add(delButton);
 
 		JPanel buttonPanel = new JPanel(new BorderLayout());
 		buttonPanel.add(buttonLeftPanel, BorderLayout.WEST);
@@ -439,7 +488,9 @@ public class BrowserDialog implements IDragDropInstigator {
 		JPanel payloadPanel = new JPanel();
 		payloadPanel.setLayout(new BoxLayout(payloadPanel, BoxLayout.Y_AXIS));
 
-		payloadPanel.add(new JLabel("Payload"));
+		JLabel payloadLabel = new JLabel("Payload");
+		payloadLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		payloadPanel.add(payloadLabel);
 		textArea = new JTextArea(10, 40);
 		payloadPanel.add(textArea);
 		JScrollPane textAreaScrollPane = new JScrollPane(payloadPanel);
@@ -473,9 +524,13 @@ public class BrowserDialog implements IDragDropInstigator {
 		propsTablesPanel.setLayout(new BoxLayout(propsTablesPanel, BoxLayout.Y_AXIS));
 
 		// Add a label at the top of the bottom panel
-		propsTablesPanel.add(new JLabel("Headers"));
+		JLabel headersLabel = new JLabel("Headers");
+		headersLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		propsTablesPanel.add(headersLabel);
 		propsTablesPanel.add(headersTable);
-		propsTablesPanel.add(new JLabel("User Properties"));
+		JLabel userPropsLabel = new JLabel("User Properties");
+		userPropsLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		propsTablesPanel.add(userPropsLabel);
 		propsTablesPanel.add(propsTable);
 		
 
@@ -488,7 +543,10 @@ public class BrowserDialog implements IDragDropInstigator {
 		bottomPanel.add(splitPane, BorderLayout.CENTER);
 
 		statusLabel = new JLabel("Browsing " + this.queue);
-		statusLabel.setFont(new Font("Arial", Font.PLAIN, 22));
+		// Use Serif font like the queue details panel for consistency
+		String statusFontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : "Serif";
+		int statusFontSize = config != null ? config.statusFontSize : 16;
+		statusLabel.setFont(new Font(statusFontFamily, Font.PLAIN, statusFontSize));
 		bottomPanel.add(statusLabel, BorderLayout.SOUTH);
 
 		
@@ -554,9 +612,11 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		SpinnerDialog spinner = new SpinnerDialog(dialog, title);
 
-		// Update filter status label
+		// Update filter status label - just show ON or OFF
 		String filterStatus = spec.isEmpty() ? "OFF" : "ON";
-		filterStatusLabel.setText("<html><span style='font-size:120%'>(" + filterStatus + ")</span></html>");
+		if (filterStatusLabel != null) {
+			filterStatusLabel.setText("(" + filterStatus + ")");
+		}
 
 		tableModel.setRowCount(0);
 		preFetch();
@@ -1108,7 +1168,8 @@ public class BrowserDialog implements IDragDropInstigator {
 	}
 
 	private void onPageChange() {
-		topLabel.setText("<html><b>Page</b> <span style='font-size:120%'>" + nCurPage + "</span> <b>of ~</b> <span style='font-size:120%'>" + estimatedPageCount + "</span></html>");
+		// Update topLabel with plain text (no HTML) using Serif font
+		topLabel.setText("Page " + nCurPage + " of ~ " + estimatedPageCount);
 		textArea.setText("");
 	}
 

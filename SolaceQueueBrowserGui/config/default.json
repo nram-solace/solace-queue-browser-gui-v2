@@ -5,9 +5,16 @@
 		"sempAdminUser": "admin",
 		"sempAdminPw": "admin",
 		"msgVpnName": "default",
-		"messagingHost": "tcp://localhost:55555",
+		"messagingHost": "tcp://localhost:55333",
 		"messagingClientUsername": "default",
 		"messagingPw": "default"
 	},
-	"downloadFolder": "./downloads"
+	"downloadFolder": "./downloads",
+	"ui": {
+		"version": "v-nram-exp-cc-2.0",
+		"fontFamily": null,
+		"defaultFontSize": 14,
+		"headerFontSize": 16,
+		"statusFontSize": 22
+	}
 }

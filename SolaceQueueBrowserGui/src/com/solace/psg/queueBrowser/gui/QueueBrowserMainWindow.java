@@ -122,6 +122,20 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		
 		this.iconCellRenderer = new IconicTableCellRenderer();
 	}
+	
+	/**
+	 * Get font from config or use FlatLaf default
+	 * @param size Font size
+	 * @param style Font style (Font.PLAIN, Font.BOLD, etc.)
+	 * @return Font instance
+	 */
+	private Font getFont(int size, int style) {
+		if (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) {
+			return new Font(thisCfg.fontFamily, style, size);
+		}
+		// Use FlatLaf default font (OS-agnostic)
+		return UIManager.getFont("Label.font").deriveFont(style, size);
+	}
 
 	private Object[][] getTableData(List<String> queueNames) {
 		ImageIcon qIcon = new ImageIcon("config/queueSm.png");
@@ -139,7 +153,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 	private void run() {
 			// Create the frame
-			frame = new JFrame("Solace Queue Maintenace Tool - feat/ui-improvements");
+			String versionStr = thisCfg != null ? thisCfg.version : "v-nram-exp-cc-2.0";
+			frame = new JFrame("Solace Queue Maintenance Tool - " + versionStr);
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			frame.setSize(1200, 800);
 			frame.setLayout(new BorderLayout());
@@ -163,6 +178,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			table = new JTable(tableModel);
 			table.setRowHeight(33);
 			table.setFillsViewportHeight(true);
+			// Set font for table cells to match queue details panel
+			String tableFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			table.setFont(new Font(tableFontFamily, Font.PLAIN, 16));
+			table.getTableHeader().setFont(new Font(tableFontFamily, Font.PLAIN, 16));
 			table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
 			table.getColumnModel().getColumn(0).setCellRenderer(iconCellRenderer);
 			table.getColumnModel().getColumn(0).setMaxWidth(48);
@@ -216,14 +235,19 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			
 			JPanel listPanel = new JPanel(new BorderLayout());
 			listPanel.setPreferredSize(new Dimension(400, listPanel.getPreferredSize().height)); // Set the preferred width
-			listPanel.add(new JLabel("Queues"), BorderLayout.NORTH);
+			JLabel queuesLabel = new JLabel("Queues");
+			String queuesFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			queuesLabel.setFont(new Font(queuesFontFamily, Font.PLAIN, 16));
+			listPanel.add(queuesLabel, BorderLayout.NORTH);
 			
 			JScrollPane scrollingList = new JScrollPane(table);
 			scrollingList.setBorder(new EmptyBorder(4, 4, 4, 4)); // Top, Left, Bottom, Right
 			listPanel.add(scrollingList, BorderLayout.CENTER);
 
 			detailsLabel = new JLabel();// TextArea();
-			detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+			// Use Serif font like the queue details panel for consistency
+			String detailsFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			detailsLabel.setFont(new Font(detailsFontFamily, Font.ITALIC, 16));
 			
 			detailsLabel.setText("<html>"
 	                + "<div style='width: 280px; text-align: left; vertical-align:top'>"
@@ -249,7 +273,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			buttonPanel = new JPanel();
 			buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
-			browseButton = new JButton("⌕ Browse");
+			browseButton = new JButton("Browse");
 			browseButton.setEnabled(false);
 			browseButton.setBackground(new Color(240, 230, 255)); // Soft purple background
 			browseButton.addActionListener(new ActionListener() {
@@ -263,7 +287,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 
-			copyAllButton = new JButton("⎘ Copy all");
+			copyAllButton = new JButton("Copy ALL");
 			copyAllButton.setEnabled(false);
 			copyAllButton.setBackground(new Color(220, 235, 255)); // Soft blue background
 			copyAllButton.addActionListener(new ActionListener() {
@@ -273,7 +297,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 
-			moveAllButton = new JButton("➜ Move all");
+			moveAllButton = new JButton("Move ALL");
 			moveAllButton.setEnabled(false);
 			moveAllButton.setBackground(new Color(255, 245, 220)); // Soft yellow background
 			moveAllButton.addActionListener(new ActionListener() {
@@ -283,7 +307,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 
-			deleteAllButton = new JButton("✕ Delete all");
+			deleteAllButton = new JButton("Delete ALL");
 			deleteAllButton.setEnabled(false);
 			deleteAllButton.setBackground(new Color(255, 220, 220)); // Soft red background
 			deleteAllButton.addActionListener(new ActionListener() {
@@ -294,7 +318,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			});
 
-			refreshButton = new JButton("↻ Refresh");
+			refreshButton = new JButton("Refresh");
 			refreshButton.setEnabled(true);
 			refreshButton.setBackground(new Color(220, 245, 255)); // Soft cyan background
 			refreshButton.addActionListener(new ActionListener() {
@@ -309,13 +333,16 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			JLabel iconLabel = new JLabel("");
 			iconLabel.setIcon(icon);
 
-			JLabel greetingLine0 = new JLabel("<html><b>Browsing:</b> <span style='font-size:110%'>" + broker.name + "</span> | <b>Broker:</b> <span style='font-size:110%'>" + broker.fqdn() + "</span></html>");
+			// Use Serif font like the queue details panel for consistency
+			// Two-line format like nram-dev but with plain text and Serif font
+			String headerFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			JLabel greetingLine0 = new JLabel("Browsing: " + broker.name + " | Broker: " + broker.fqdn());
 			greetingLine0.setBorder(new EmptyBorder(0, 0, 6, 0)); // Top, Left, Bottom, Right
-			greetingLine0.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+			greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, 16));
 
-			JLabel greetingLine1 = new JLabel("<html><b>Service:</b> <span style='font-size:110%'>" + broker.msgVpnName + "</span> | <b>SEMP User:</b> <span style='font-size:110%'>" + broker.sempAdminUser + "</span> | <b>Client User:</b> <span style='font-size:110%'>" + broker.messagingClientUsername + "</span></html>");
+			JLabel greetingLine1 = new JLabel("Service: " + broker.msgVpnName + " | SEMP User: " + broker.sempAdminUser + " | Client User: " + broker.messagingClientUsername);
 			greetingLine1.setBorder(new EmptyBorder(0, 0, 6, 0)); // Top, Left, Bottom, Right
-			greetingLine1.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+			greetingLine1.setFont(greetingLine0.getFont());
 
 			JPanel wordsPanel = new JPanel();
 			wordsPanel.setLayout(new BoxLayout(wordsPanel, BoxLayout.Y_AXIS));
@@ -329,7 +356,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			JPanel rightPanel = new JPanel();
 			rightPanel.setLayout(new BorderLayout());
-			rightPanel.add(new JLabel("Queue details"), BorderLayout.NORTH);
+			JLabel queueDetailsLabel = new JLabel("Queue details");
+			String queueDetailsFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			queueDetailsLabel.setFont(new Font(queueDetailsFontFamily, Font.PLAIN, 16));
+			rightPanel.add(queueDetailsLabel, BorderLayout.NORTH);
 			rightPanel.add(textScrollPane, BorderLayout.CENTER);
 
 			frame.add(topPanel, BorderLayout.NORTH);
@@ -421,7 +451,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private void onBrowse(String queueName, JFrame frame) throws SempException, JCSMPException {
 		String[] otherQueues = getListOfQueuesExceptCurrentlySelectedOne(queueName);
 		BrowserDialog d = new BrowserDialog(this.sempV2ActionClient, this.broker, queueName, frame,
-				selectedQueueMsgCount, otherQueues, thisCfg.downloadFolder);
+				selectedQueueMsgCount, otherQueues, thisCfg.downloadFolder, thisCfg);
 		d.run();
 	}
 
@@ -447,7 +477,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		QueueActionWindow cp;
 		try {
 			cp = new QueueActionWindow(frame, broker, eAction.eCopy, sempV2ActionClient, sempV2MonitorClient,
-					broker.msgVpnName, selectedQueue, destQueue);
+					broker.msgVpnName, selectedQueue, destQueue, thisCfg);
 			cp.run();
 		} catch (BrokerException e) {
 			e.printStackTrace();
@@ -460,7 +490,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			String destQueue = pickAQueue(frame);
 
 			cp = new QueueActionWindow(frame, broker, eAction.eMove, sempV2ActionClient, sempV2MonitorClient,
-					broker.msgVpnName, selectedQueue, destQueue);
+					broker.msgVpnName, selectedQueue, destQueue, thisCfg);
 			cp.run();
 
 			SwingUtilities.invokeLater(() -> {
@@ -487,7 +517,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			QueueActionWindow cp;
 			try {
 				cp = new QueueActionWindow(frame, broker, eAction.eDelete, sempV2ActionClient, sempV2MonitorClient,
-						broker.msgVpnName, selectedQueue, "");
+						broker.msgVpnName, selectedQueue, "", thisCfg);
 				cp.run();
 
 				SwingUtilities.invokeLater(() -> {
@@ -663,14 +693,24 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			System.err.println("Failed to initialize FlatLaf, using default look and feel: " + ex.getMessage());
 		}
 
-		System.out.println("=================================================================");
-		System.out.println("Starting Solace Queue Browser - Version: feat/ui-improvements");
-		System.out.println("=================================================================");
-
 		CommandLineParser parser = new CommandLineParser();
 		parser.parseArgs(args);
+		
+		// Load config to get version
+		Config tempCfg = new Config(parser.configFileProvided);
+		try {
+			tempCfg.load();
+		} catch (BrokerException e) {
+			logger.error("Failed to load config for version info: " + e.getMessage());
+		}
+		String versionStr = tempCfg.version;
+		
+		System.out.println("=================================================================");
+		System.out.println("Starting Solace Queue Browser - Version: " + versionStr);
+		System.out.println("=================================================================");
+
 		logger.info("=================================================================");
-		logger.info("Starting Solace Queue Browser - Version: feat/ui-improvements");
+		logger.info("Starting Solace Queue Browser - Version: " + versionStr);
 		logger.info("=================================================================");
 		logger.info("Configuration File: " + parser.configFileProvided);
 

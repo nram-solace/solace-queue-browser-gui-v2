@@ -15,6 +15,13 @@ public class Config {
 	private String configFile;
 	public Broker broker;
 	public String downloadFolder = "./downloads";
+	
+	// UI Configuration - OS-agnostic defaults
+	public String fontFamily = null; // null means use FlatLaf default
+	public int defaultFontSize = 14;
+	public int headerFontSize = 16;
+	public int statusFontSize = 22;
+	public String version = "v-nram-exp-cc-2.0";
 
 	/* removed for V1 release
 	public List<String> blackListedQueues = null;
@@ -39,6 +46,26 @@ public class Config {
 		JSONObject doc = new JSONObject(fileContent);
 		if (doc.has("downloadFolder")) {
 			downloadFolder = doc.getString("downloadFolder");
+		}
+		
+		// Load UI configuration if present
+		if (doc.has("ui")) {
+			JSONObject uiConfig = doc.getJSONObject("ui");
+			if (uiConfig.has("fontFamily") && !uiConfig.isNull("fontFamily")) {
+				fontFamily = uiConfig.getString("fontFamily");
+			}
+			if (uiConfig.has("defaultFontSize")) {
+				defaultFontSize = uiConfig.getInt("defaultFontSize");
+			}
+			if (uiConfig.has("headerFontSize")) {
+				headerFontSize = uiConfig.getInt("headerFontSize");
+			}
+			if (uiConfig.has("statusFontSize")) {
+				statusFontSize = uiConfig.getInt("statusFontSize");
+			}
+			if (uiConfig.has("version")) {
+				version = uiConfig.getString("version");
+			}
 		}
 
 		JSONObject eventBroker = doc.getJSONObject("eventBroker");

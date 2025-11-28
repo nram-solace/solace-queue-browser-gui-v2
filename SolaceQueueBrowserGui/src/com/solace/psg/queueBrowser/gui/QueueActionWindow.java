@@ -48,9 +48,11 @@ public class QueueActionWindow extends JPanel {
 	private String windowTitle;
 	private String srcQlabelTitle;
 	private String tarQName;
+	private Config config;
 	
 	public QueueActionWindow(JFrame parentFrame, Broker broker, eAction action, SempClient sempV2ActionClient, SempClient sempV2MonitorClient, 
-			String msgVpnName, String queueName, String destQnameName ) throws BrokerException {
+			String msgVpnName, String queueName, String destQnameName, Config config) throws BrokerException {
+		this.config = config != null ? config : new Config(""); // Fallback if null
 		this.sempV2ActionClient = sempV2ActionClient;
 		this.sempV2MonitorClient = sempV2MonitorClient;
 		this.srcQName = queueName;
@@ -105,6 +107,20 @@ public class QueueActionWindow extends JPanel {
 		});
 		shovelTimer.start();
 	}
+	
+	/**
+	 * Get font from config or use FlatLaf default
+	 * @param size Font size
+	 * @param style Font style (Font.PLAIN, Font.BOLD, etc.)
+	 * @return Font instance
+	 */
+	private Font getFont(int size, int style) {
+		if (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) {
+			return new Font(config.fontFamily, style, size);
+		}
+		// Use FlatLaf default font (OS-agnostic)
+		return UIManager.getFont("Label.font").deriveFont(style, size);
+	}
 
 	@Override
 	protected void paintComponent(Graphics g) {
@@ -138,7 +154,8 @@ public class QueueActionWindow extends JPanel {
 		verticalPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4)); // Add some margin
 
 		JLabel labelTop = new JLabel(srcQlabelTitle);
-		labelTop.setFont(new Font("Arial", Font.PLAIN, 16));
+		int headerFontSize = config != null ? config.headerFontSize : 16;
+		labelTop.setFont(getFont(headerFontSize, Font.PLAIN));
 		verticalPanel.add(labelTop);
 
 		JLabel labelLine2 = new JLabel("Source queue: '" + srcQName + "'.");
@@ -168,7 +185,7 @@ public class QueueActionWindow extends JPanel {
 		
 		progressLabel = new JLabel(this.getProgressLabelText());
 		progressLabel.setBorder(new EmptyBorder(4, 4, 4, 4)); // Top, Left, Bottom, Right
-		progressLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+		progressLabel.setFont(getFont(headerFontSize, Font.PLAIN));
 		JPanel labelPanel = new JPanel();
 		labelPanel.setLayout(new BorderLayout()); // Use BorderLayout to stack them
 		labelPanel.add(progressLabel, BorderLayout.WEST);
