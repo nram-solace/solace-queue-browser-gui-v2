@@ -76,6 +76,10 @@ import com.solacesystems.jcsmp.SDTException;
 import com.solacesystems.jcsmp.SDTMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 public class BrowserDialog implements IDragDropInstigator {
 	private static final Logger logger = LoggerFactory.getLogger(BrowserDialog.class.getName());
@@ -115,6 +119,10 @@ public class BrowserDialog implements IDragDropInstigator {
 	private JTextArea textArea;
 	//private JTextArea propsArea;
 	private JTable table;
+	private JCheckBox wrapTextCheckBox;
+	private JComboBox<String> formatComboBox;
+	private JScrollPane textAreaScrollPane;
+	private String currentPayload; // Store raw payload for reformatting
 	private DefaultTableModel tableModel; 
 	private JTable headersTable;
 	private DefaultTableModel headersTableModel; 
@@ -663,16 +671,69 @@ public class BrowserDialog implements IDragDropInstigator {
 		//JLabel bottomLabel = new JLabel("Payload");
 		//bottomPanel.add(bottomLabel, BorderLayout.NORTH);
 
-		// Add a large text area to the bottom panel
-		JPanel payloadPanel = new JPanel();
-		payloadPanel.setLayout(new BoxLayout(payloadPanel, BoxLayout.Y_AXIS));
-
+		// Payload header with controls
+		JPanel payloadHeaderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		JLabel payloadLabel = new JLabel("Payload");
 		payloadLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
-		payloadPanel.add(payloadLabel);
-		textArea = new JTextArea(10, 40);
-		payloadPanel.add(textArea);
-		JScrollPane textAreaScrollPane = new JScrollPane(payloadPanel);
+		payloadHeaderPanel.add(payloadLabel);
+		
+		// Format selection
+		JLabel formatLabel = new JLabel("Format:");
+		formatLabel.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		payloadHeaderPanel.add(formatLabel);
+		formatComboBox = new JComboBox<>(new String[]{"Plain", "JSON", "YAML", "CSV"});
+		formatComboBox.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		formatComboBox.setSelectedItem("Plain");
+		formatComboBox.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (currentPayload != null) {
+					updatePayloadDisplay();
+				}
+			}
+		});
+		payloadHeaderPanel.add(formatComboBox);
+		
+		// Wrap text checkbox
+		wrapTextCheckBox = new JCheckBox("Wrap Text");
+		wrapTextCheckBox.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		wrapTextCheckBox.setSelected(false);
+		wrapTextCheckBox.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				boolean wrap = wrapTextCheckBox.isSelected();
+				textArea.setLineWrap(wrap);
+				textArea.setWrapStyleWord(true);
+				// Update the text area's scroll pane to show/hide horizontal scrollbar
+				if (textAreaScrollPane != null) {
+					textAreaScrollPane.setHorizontalScrollBarPolicy(
+						wrap ? JScrollPane.HORIZONTAL_SCROLLBAR_NEVER : JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+				}
+				// Force repaint to update display
+				textArea.revalidate();
+				textArea.repaint();
+			}
+		});
+		payloadHeaderPanel.add(wrapTextCheckBox);
+		
+		textArea = new JTextArea(4, 40); // Reduced to 4 rows for compact display
+		textArea.setLineWrap(false);
+		textArea.setWrapStyleWord(true);
+		textArea.setFont(new java.awt.Font("Monospaced", Font.PLAIN, 12));
+		
+		// Wrap textArea in scroll pane for proper line wrapping
+		textAreaScrollPane = new JScrollPane(textArea);
+		textAreaScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		textAreaScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		textAreaScrollPane.setPreferredSize(new Dimension(0, 100)); // Set preferred height - reduced
+		textAreaScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120)); // Limit max height - reduced
+		
+		// Use BorderLayout for payload container to control sizing better
+		JPanel payloadContainer = new JPanel(new BorderLayout());
+		payloadContainer.add(payloadHeaderPanel, BorderLayout.NORTH);
+		payloadContainer.add(textAreaScrollPane, BorderLayout.CENTER);
+		payloadContainer.setPreferredSize(new Dimension(0, 130)); // Limit container height - reduced
+		payloadContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150)); // Limit max height - reduced
 
 		String[][] headerData = new String[][] {};
 		String[] headerColumnNames = {"Property", "Value" };
@@ -715,11 +776,14 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		JScrollPane propsAreaScrollPane = new JScrollPane(propsTablesPanel);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, propsAreaScrollPane, textAreaScrollPane);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, propsAreaScrollPane, payloadContainer);
         splitPane.setDividerLocation(350); // Initial divider position
         splitPane.setOneTouchExpandable(true); // Adds little arrows to collapse/expand
+		splitPane.setResizeWeight(0.5); // Allow both sides to resize
 		
 		bottomPanel.add(splitPane, BorderLayout.CENTER);
+		bottomPanel.setPreferredSize(new Dimension(0, 200)); // Limit bottom panel height
+		bottomPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220)); // Limit max height
 
 		statusLabel = new JLabel("Browsing " + this.queue);
 		// Use Serif font like the queue details panel for consistency
@@ -1585,7 +1649,8 @@ public class BrowserDialog implements IDragDropInstigator {
 			this.selectedRow = row;
 			String id = getMessageIdOfSelectedRow();
 			String payload = browser.getPayload(id);
-			textArea.setText(payload);
+			currentPayload = payload; // Store raw payload
+			updatePayloadDisplay();
 			textArea.setCaretPosition(0);
 
 			boolean moreRowsAvailable = false;
@@ -1709,7 +1774,294 @@ public class BrowserDialog implements IDragDropInstigator {
 		topLabel.setText(pageText);
 		logBoth("*** onPageChange: topLabel set to '" + pageText + "' ***");
 		textArea.setText("");
+		currentPayload = null;
 		logBoth("*** onPageChange: textArea cleared ***");
+	}
+	
+	/**
+	 * Update the payload display based on selected format
+	 */
+	private void updatePayloadDisplay() {
+		if (currentPayload == null) {
+			textArea.setText("");
+			return;
+		}
+		
+		String selectedFormat = (String) formatComboBox.getSelectedItem();
+		String formattedPayload = currentPayload;
+		
+		try {
+			switch (selectedFormat) {
+				case "JSON":
+					formattedPayload = formatAsJSON(currentPayload);
+					break;
+				case "YAML":
+					formattedPayload = formatAsYAML(currentPayload);
+					break;
+				case "CSV":
+					formattedPayload = formatAsCSV(currentPayload);
+					break;
+				case "Plain":
+				default:
+					formattedPayload = currentPayload;
+					break;
+			}
+		} catch (Exception e) {
+			// If formatting fails, show error message and use plain text
+			formattedPayload = currentPayload + "\n\n[Formatting error: " + e.getMessage() + "]";
+		}
+		
+		textArea.setText(formattedPayload);
+	}
+	
+	/**
+	 * Format payload as JSON with proper indentation
+	 */
+	private String formatAsJSON(String payload) {
+		if (payload == null || payload.trim().isEmpty()) {
+			return payload;
+		}
+		
+		try {
+			// Try to parse as JSON
+			JsonElement jsonElement = JsonParser.parseString(payload);
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			return gson.toJson(jsonElement);
+		} catch (Exception e) {
+			// If not valid JSON, try to find JSON-like content
+			String trimmed = payload.trim();
+			if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+				// Might be JSON but with extra content, try to extract
+				int start = trimmed.indexOf('{');
+				int end = trimmed.lastIndexOf('}');
+				if (start >= 0 && end > start) {
+					try {
+						String jsonPart = trimmed.substring(start, end + 1);
+						JsonElement jsonElement = JsonParser.parseString(jsonPart);
+						Gson gson = new GsonBuilder().setPrettyPrinting().create();
+						return trimmed.substring(0, start) + "\n" + gson.toJson(jsonElement) + "\n" + trimmed.substring(end + 1);
+					} catch (Exception e2) {
+						// Fall through to return original
+					}
+				}
+			}
+			// Not valid JSON, return original
+			return payload;
+		}
+	}
+	
+	/**
+	 * Format payload as YAML (basic implementation)
+	 */
+	private String formatAsYAML(String payload) {
+		if (payload == null || payload.trim().isEmpty()) {
+			return payload;
+		}
+		
+		try {
+			// First try to parse as JSON and convert to YAML
+			JsonElement jsonElement = JsonParser.parseString(payload);
+			return jsonToYaml(jsonElement, 0);
+		} catch (Exception e) {
+			// If not JSON, try to format as key-value pairs or return as-is
+			return payload;
+		}
+	}
+	
+	/**
+	 * Convert JSON element to YAML format
+	 */
+	private String jsonToYaml(JsonElement element, int indent) {
+		String indentStr = "  ".repeat(indent);
+		StringBuilder sb = new StringBuilder();
+		
+		if (element.isJsonObject()) {
+			Set<java.util.Map.Entry<String, JsonElement>> entries = element.getAsJsonObject().entrySet();
+			for (java.util.Map.Entry<String, JsonElement> entry : entries) {
+				sb.append(indentStr).append(entry.getKey()).append(": ");
+				JsonElement value = entry.getValue();
+				if (value.isJsonPrimitive()) {
+					if (value.getAsJsonPrimitive().isString()) {
+						sb.append("\"").append(value.getAsString()).append("\"");
+					} else {
+						sb.append(value.getAsString());
+					}
+					sb.append("\n");
+				} else if (value.isJsonObject() || value.isJsonArray()) {
+					sb.append("\n");
+					sb.append(jsonToYaml(value, indent + 1));
+				} else {
+					sb.append(value.getAsString()).append("\n");
+				}
+			}
+		} else if (element.isJsonArray()) {
+			for (JsonElement item : element.getAsJsonArray()) {
+				sb.append(indentStr).append("- ");
+				if (item.isJsonPrimitive()) {
+					if (item.getAsJsonPrimitive().isString()) {
+						sb.append("\"").append(item.getAsString()).append("\"");
+					} else {
+						sb.append(item.getAsString());
+					}
+					sb.append("\n");
+				} else {
+					sb.append("\n");
+					sb.append(jsonToYaml(item, indent + 1));
+				}
+			}
+		} else if (element.isJsonPrimitive()) {
+			if (element.getAsJsonPrimitive().isString()) {
+				sb.append("\"").append(element.getAsString()).append("\"");
+			} else {
+				sb.append(element.getAsString());
+			}
+		}
+		
+		return sb.toString();
+	}
+	
+	/**
+	 * Format payload as CSV with proper alignment
+	 */
+	private String formatAsCSV(String payload) {
+		if (payload == null || payload.trim().isEmpty()) {
+			return payload;
+		}
+		
+		String[] lines = payload.split("\n");
+		if (lines.length == 0) {
+			return payload;
+		}
+		
+		// Check if it's already CSV-like (contains commas)
+		boolean looksLikeCSV = false;
+		for (String line : lines) {
+			if (line.contains(",") && !line.trim().isEmpty()) {
+				looksLikeCSV = true;
+				break;
+			}
+		}
+		
+		if (!looksLikeCSV) {
+			// Try to parse as JSON and convert to CSV
+			try {
+				JsonElement jsonElement = JsonParser.parseString(payload);
+				return jsonToCSV(jsonElement);
+			} catch (Exception e) {
+				// Not JSON, return original
+				return payload;
+			}
+		}
+		
+		// Format existing CSV with proper alignment
+		StringBuilder sb = new StringBuilder();
+		for (String line : lines) {
+			if (line.trim().isEmpty()) {
+				sb.append("\n");
+				continue;
+			}
+			String[] fields = line.split(",");
+			for (int i = 0; i < fields.length; i++) {
+				sb.append(fields[i].trim());
+				if (i < fields.length - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
+	/**
+	 * Convert JSON element to CSV format
+	 */
+	private String jsonToCSV(JsonElement element) {
+		StringBuilder sb = new StringBuilder();
+		
+		if (element.isJsonObject()) {
+			// For objects, create header row and data row
+			Set<java.util.Map.Entry<String, JsonElement>> entries = element.getAsJsonObject().entrySet();
+			java.util.List<String> headers = new ArrayList<>();
+			java.util.List<String> values = new ArrayList<>();
+			
+			for (java.util.Map.Entry<String, JsonElement> entry : entries) {
+				headers.add(entry.getKey());
+				JsonElement value = entry.getValue();
+				if (value.isJsonPrimitive()) {
+					values.add(value.getAsString());
+				} else {
+					values.add(value.toString());
+				}
+			}
+			
+			// Write headers
+			for (int i = 0; i < headers.size(); i++) {
+				sb.append(headers.get(i));
+				if (i < headers.size() - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append("\n");
+			
+			// Write values
+			for (int i = 0; i < values.size(); i++) {
+				sb.append(values.get(i));
+				if (i < values.size() - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append("\n");
+		} else if (element.isJsonArray()) {
+			// For arrays, each element becomes a row
+			boolean first = true;
+			for (JsonElement item : element.getAsJsonArray()) {
+				if (item.isJsonObject()) {
+					if (first) {
+						// Write headers from first object
+						Set<String> headers = item.getAsJsonObject().keySet();
+						java.util.List<String> headerList = new ArrayList<>(headers);
+						for (int i = 0; i < headerList.size(); i++) {
+							sb.append(headerList.get(i));
+							if (i < headerList.size() - 1) {
+								sb.append(", ");
+							}
+						}
+						sb.append("\n");
+						first = false;
+					}
+					// Write values
+					Set<java.util.Map.Entry<String, JsonElement>> entries = item.getAsJsonObject().entrySet();
+					java.util.List<String> values = new ArrayList<>();
+					for (java.util.Map.Entry<String, JsonElement> entry : entries) {
+						JsonElement value = entry.getValue();
+						if (value.isJsonPrimitive()) {
+							values.add(value.getAsString());
+						} else {
+							values.add(value.toString());
+						}
+					}
+					for (int i = 0; i < values.size(); i++) {
+						sb.append(values.get(i));
+						if (i < values.size() - 1) {
+							sb.append(", ");
+						}
+					}
+					sb.append("\n");
+				} else {
+					// Simple array values
+					if (item.isJsonPrimitive()) {
+						sb.append(item.getAsString()).append("\n");
+					} else {
+						sb.append(item.toString()).append("\n");
+					}
+				}
+			}
+		} else {
+			// Primitive value
+			sb.append(element.getAsString()).append("\n");
+		}
+		
+		return sb.toString();
 	}
 	
 	/**
