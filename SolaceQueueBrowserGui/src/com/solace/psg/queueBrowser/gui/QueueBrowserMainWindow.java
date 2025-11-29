@@ -1488,7 +1488,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		logger.info("=================================================================");
 		logger.info("Starting Solace Queue Browser - Version: " + versionStr);
 		logger.info("=================================================================");
-		logger.info("*** VERIFICATION: This is v2.0.2 with SMF error handling ***");
+		logger.info("*** VERIFICATION: This is v2.1.1 with password encryption support ***");
 		logger.info("Configuration File: " + parser.configFileProvided);
 
 		QueueBrowserMainWindow me = new QueueBrowserMainWindow(parser.configFileProvided, parser.masterPasswordProvided);
