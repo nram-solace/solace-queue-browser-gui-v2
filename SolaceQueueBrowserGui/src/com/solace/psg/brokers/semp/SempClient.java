@@ -344,6 +344,214 @@ public class SempClient {
 		return values;
 	}
 
+	/**
+	 * Retrieves queue information for all queues in bulk.
+	 * Fetches queueName, accessType, partitionCount, maxMsgSpoolUsage from config API,
+	 * and msgSpoolUsage from monitor API for efficient filtering and sorting.
+	 * 
+	 * @param vpn Message VPN name
+	 * @return List of QueueInfo objects with partial data (name, accessType, partitionCount, maxMsgSpoolUsage, msgSpoolUsage)
+	 * @throws SempException if API call fails
+	 */
+	public List<QueueInfo> getAllQueueInfo(String vpn) throws SempException {
+		ArrayList<QueueInfo> queueInfos = new ArrayList<QueueInfo>();
+		
+		// Get config properties (accessType, partitionCount, maxMsgSpoolUsage) from config API
+		String configResource = "/msgVpns/{msgVpnName}/queues?select=queueName,accessType,partitionCount,maxMsgSpoolUsage";
+		configResource = configResource.replace("{msgVpnName}", vpn);
+		
+		// Get spool usage from monitor API (with select for efficiency)
+		String monitorResourceSpool = "/msgVpns/{msgVpnName}/queues?select=queueName,msgSpoolUsage";
+		monitorResourceSpool = monitorResourceSpool.replace("{msgVpnName}", vpn);
+		
+		// Get message counts from monitor API (without select to get collections)
+		String monitorResourceCounts = "/msgVpns/{msgVpnName}/queues";
+		monitorResourceCounts = monitorResourceCounts.replace("{msgVpnName}", vpn);
+		
+		try {
+			// Get config data with pagination
+			HashMap<String, QueueInfo> queueMap = new HashMap<String, QueueInfo>();
+			boolean hasMore = true;
+			String cursor = null;
+			int pageCount = 0;
+			
+			// Fetch config properties - use simple pagination approach
+			// Try to get all pages by using count parameter and cursor
+			while (hasMore && pageCount < 1000) {
+				String pageResource = configResource;
+				String delim = pageResource.contains("?") ? "&" : "?";
+				pageResource = pageResource + delim + "count=100";
+				if (cursor != null) {
+					pageResource = pageResource + "&cursor=" + cursor;
+				}
+				
+				String pageResponse = this.getSempV2(pageResource, ePaginationBehavior.eNone);
+				JSONObject pageObj = new JSONObject(pageResponse);
+				
+				if (pageObj.has("data")) {
+					JSONArray dataArray = pageObj.getJSONArray("data");
+					for (int i = 0; i < dataArray.length(); i++) {
+						JSONObject queueObj = dataArray.getJSONObject(i);
+						QueueInfo info = new QueueInfo();
+						info.name = queueObj.getString("queueName");
+						info.msgVpnName = vpn;
+						info.accessType = queueObj.optString("accessType", "");
+						info.partitionCount = queueObj.optInt("partitionCount", 0);
+						info.maxMsgSpoolUsage = queueObj.optInt("maxMsgSpoolUsage", 0);
+						// Initialize defaults
+						info.msgSpoolUsage = 0;
+						info.msgCount = 0;
+						info.egressEnabled = false;
+						info.ingressEnabled = false;
+						info.maxBindCount = 0;
+						info.maxDeliveredUnackedMsgsPerFlow = 0;
+						info.maxMsgSize = 0;
+						info.maxRedeliveryCount = 0;
+						info.deadMsgQueue = "";
+						info.owner = "";
+						info.permission = "";
+						info.rejectMsgToSenderOnDiscardBehavior = "";
+						queueMap.put(info.name, info);
+					}
+				}
+				
+				// Check for next page
+				if (pageObj.has("meta")) {
+					JSONObject meta = pageObj.getJSONObject("meta");
+					if (meta.has("paging")) {
+						JSONObject paging = meta.getJSONObject("paging");
+						cursor = paging.optString("nextPageCursor", null);
+						hasMore = (cursor != null && !cursor.isEmpty());
+					} else {
+						hasMore = false;
+					}
+				} else {
+					hasMore = false;
+				}
+				
+				pageCount++;
+			}
+			
+			// First fetch spool usage from monitor API
+			cursor = null;
+			hasMore = true;
+			pageCount = 0;
+			
+			while (hasMore && pageCount < 1000) {
+				String pageResource = monitorResourceSpool;
+				String delim = pageResource.contains("?") ? "&" : "?";
+				pageResource = pageResource + delim + "count=100";
+				if (cursor != null) {
+					pageResource = pageResource + "&cursor=" + cursor;
+				}
+				
+				String pageResponse = this.getSempV2Monitoring(pageResource, ePaginationBehavior.eNone);
+				JSONObject pageObj = new JSONObject(pageResponse);
+				
+				if (pageObj.has("data")) {
+					JSONArray dataArray = pageObj.getJSONArray("data");
+					for (int i = 0; i < dataArray.length(); i++) {
+						JSONObject queueObj = dataArray.getJSONObject(i);
+						String queueName = queueObj.getString("queueName");
+						QueueInfo info = queueMap.get(queueName);
+						if (info != null) {
+							info.msgSpoolUsage = queueObj.optInt("msgSpoolUsage", 0);
+						}
+					}
+				}
+				
+				// Check for next page
+				if (pageObj.has("meta")) {
+					JSONObject meta = pageObj.getJSONObject("meta");
+					if (meta.has("paging")) {
+						JSONObject paging = meta.getJSONObject("paging");
+						cursor = paging.optString("nextPageCursor", null);
+						hasMore = (cursor != null && !cursor.isEmpty());
+					} else {
+						hasMore = false;
+					}
+				} else {
+					hasMore = false;
+				}
+				
+				pageCount++;
+			}
+			
+			// Now fetch message counts separately (without select to get collections)
+			// This is a separate call but necessary to get msgCount
+			cursor = null;
+			hasMore = true;
+			pageCount = 0;
+			
+			while (hasMore && pageCount < 1000) {
+				String pageResource = monitorResourceCounts;
+				String delim = pageResource.contains("?") ? "&" : "?";
+				pageResource = pageResource + delim + "count=100";
+				if (cursor != null) {
+					pageResource = pageResource + "&cursor=" + cursor;
+				}
+				
+				String pageResponse = this.getSempV2Monitoring(pageResource, ePaginationBehavior.eNone);
+				JSONObject pageObj = new JSONObject(pageResponse);
+				
+				if (pageObj.has("data")) {
+					JSONArray dataArray = pageObj.getJSONArray("data");
+					int msgCountFetched = 0;
+					for (int i = 0; i < dataArray.length(); i++) {
+						JSONObject queueObj = dataArray.getJSONObject(i);
+						String queueName = queueObj.getString("queueName");
+						QueueInfo info = queueMap.get(queueName);
+						if (info != null) {
+							if (queueObj.has("collections")) {
+								JSONObject collections = queueObj.getJSONObject("collections");
+								if (collections.has("msgs")) {
+									JSONObject msgs = collections.getJSONObject("msgs");
+									info.msgCount = msgs.optInt("count", 0);
+									if (info.msgCount > 0) {
+										msgCountFetched++;
+									}
+								} else {
+									info.msgCount = 0;
+								}
+							} else {
+								info.msgCount = 0;
+							}
+						}
+					}
+					if (pageCount == 0 && msgCountFetched == 0) {
+						logger.warn("No message counts found in collections - msgCount will be 0 for all queues");
+					}
+				}
+				
+				// Check for next page
+				if (pageObj.has("meta")) {
+					JSONObject meta = pageObj.getJSONObject("meta");
+					if (meta.has("paging")) {
+						JSONObject paging = meta.getJSONObject("paging");
+						cursor = paging.optString("nextPageCursor", null);
+						hasMore = (cursor != null && !cursor.isEmpty());
+					} else {
+						hasMore = false;
+					}
+				} else {
+					hasMore = false;
+				}
+				
+				pageCount++;
+			}
+			
+			// Convert map to list
+			queueInfos.addAll(queueMap.values());
+			
+			logger.info("Retrieved " + queueInfos.size() + " queues with properties");
+		} catch (SempException e) {
+			throw new SempException(e);
+		} catch (Exception e) {
+			throw new SempException("Failed to parse queue info: " + e.getMessage() + " - " + e.getClass().getSimpleName());
+		}
+		return queueInfos;
+	}
+
 	public String getQueueDetails(String vpn, String queueName) throws SempException {
 		String resource = "config/msgVpns/{msgVpnName}/queues/{queueName}";
 		resource = resource.replace("{msgVpnName}", vpn);

@@ -15,7 +15,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
@@ -32,6 +34,12 @@ import javax.swing.JPasswordField;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JCheckBox;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -64,7 +72,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private SempClient sempV2MonitorClient;
 	private SempClient sempV2ActionClient;;
 	Broker broker;
-	List<String> queues;
+	List<QueueInfo> allQueues; // All queues with properties
+	List<QueueInfo> filteredQueues; // Filtered and sorted queues for display
 	String selectedQueue = "";
 	int selectedQueueMsgCount = 0;
 	String configFile;
@@ -89,6 +98,21 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private JComboBox<String> brokerComboBox;
 	private JLabel greetingLine0;
 	private JLabel greetingLine1;
+	
+	// Filter and sort UI components
+	private JTextField searchField;
+	private JCheckBox filterExclusive;
+	private JCheckBox filterNonExclusive;
+	private JCheckBox filterPartitioned;
+	private JCheckBox filterLastValue;
+	private ButtonGroup categoryFilterGroup;
+	private JRadioButton categoryAll;
+	private JRadioButton categoryUser;
+	private JRadioButton categorySystem;
+	private JComboBox<String> sortComboBox;
+	private JButton sortAscDescButton;
+	private boolean sortAscending = true;
+	private JLabel queueCountLabel;
 
 
 	class ListItem {
@@ -209,9 +233,16 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 					broker.sempAdminPw);
 			sempV2MonitorClient = SempClient.SempClientFactory(eApi.eMonitor, broker.sempHost, broker.sempAdminUser,
 					broker.sempAdminPw);
-			queues = sempV2ConfigClient.getAllQueueNames(broker.msgVpnName);
-			Collections.sort(queues);
-			logger.info("SEMP connection successful. Found " + queues.size() + " queues.");
+			// Fetch queue info with properties for filtering and sorting
+			allQueues = sempV2MonitorClient.getAllQueueInfo(broker.msgVpnName);
+			if (allQueues == null) {
+				allQueues = new ArrayList<QueueInfo>();
+			}
+			// Initialize filtered queues - will be set by applyFiltersAndSorting()
+			filteredQueues = new ArrayList<QueueInfo>(allQueues);
+			// Apply default filters (User category) and sorting
+			// Note: UI components may not be initialized yet, so we'll apply filters after UI is created
+			logger.info("SEMP connection successful. Found " + allQueues.size() + " queues.");
 		} catch (SempException e) {
 			String errorMsg = "SEMP connection failed: " + e.getMessage();
 			logger.error(errorMsg, e);
@@ -220,10 +251,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		
 		// Test SMF connection upfront by creating a test browser instance
 		try {
-			if (queues.size() > 0) {
+			if (allQueues.size() > 0) {
 				// Test SMF connection with first available queue
 				// This will throw exception if SMF connection fails
-				PaginatedCachingBrowser testBrowser = new PaginatedCachingBrowser(broker, queues.get(0), 1);
+				PaginatedCachingBrowser testBrowser = new PaginatedCachingBrowser(broker, allQueues.get(0).name, 1);
 				// Note: PaginatedCachingBrowser manages its own connection lifecycle
 				// The connection will be closed when the browser is garbage collected
 				logger.info("SMF connection test successful.");
@@ -263,18 +294,16 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		return UIManager.getFont("Label.font").deriveFont(style, size);
 	}
 
-	private Object[][] getTableData(List<String> queueNames) {
+	private Object[][] getTableData(List<QueueInfo> queueInfos) {
 		ImageIcon qIcon = new ImageIcon("config/queueSm.png");
-		Object[][] data = new Object[queueNames.size()][];
-		for (int i = 0; i < queueNames.size(); i++) {
-			//ArrayList<String> row = queueNames.get(i);
-			String q = queueNames.get(i);
+		Object[][] data = new Object[queueInfos.size()][];
+		for (int i = 0; i < queueInfos.size(); i++) {
+			QueueInfo info = queueInfos.get(i);
 			data[i] = new Object[2];
 			data[i][0] = qIcon;
-			data[i][1] = q;
+			data[i][1] = info.name;
 		}
 		return data;
-
 	}
 
 	private void run() {
@@ -292,7 +321,13 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			// Resize icon to half size for display in header
 			ImageIcon headerIcon = new ImageIcon(image.getScaledInstance(icon.getIconWidth() / 2, icon.getIconHeight() / 2, Image.SCALE_SMOOTH));
 
-			Object[][] data = getTableData(queues);// new String[][] {};
+			// Initialize filtered queues if not already done
+			if (filteredQueues == null) {
+				filteredQueues = allQueues != null ? new ArrayList<QueueInfo>(allQueues) : new ArrayList<QueueInfo>();
+			}
+			// Note: Filters will be applied after UI components are created
+			// The table will be initialized with all queues, then filtered
+			Object[][] data = getTableData(filteredQueues);// new String[][] {};
 			String[] columnNames = { "", "Queues"};
 
 			// Create the table model
@@ -381,6 +416,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			JPanel listPanel = new JPanel(new BorderLayout());
 			listPanel.setPreferredSize(new Dimension(400, listPanel.getPreferredSize().height)); // Set the preferred width
 			
+			// Create filter and sort panel
+			JPanel filterSortPanel = createFilterSortPanel();
+			listPanel.add(filterSortPanel, BorderLayout.NORTH);
+			
 			JScrollPane scrollingList = new JScrollPane(table);
 			scrollingList.setBorder(new EmptyBorder(4, 4, 4, 4)); // Top, Left, Bottom, Right
 			listPanel.add(scrollingList, BorderLayout.CENTER);
@@ -423,10 +462,48 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			browseButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
+					// Get the currently selected queue from the table
+					String queueToBrowse = getSelectedQueue();
+					if (queueToBrowse == null || queueToBrowse.isEmpty()) {
+						// Fallback to stored selectedQueue if table has no selection
+						queueToBrowse = (selectedQueue != null && !selectedQueue.isEmpty()) ? selectedQueue : null;
+					}
+					
+					// Verify the queue is still in the filtered list
+					if (queueToBrowse != null && filteredQueues != null) {
+						boolean queueExists = false;
+						for (QueueInfo q : filteredQueues) {
+							if (q.name != null && q.name.equals(queueToBrowse)) {
+								queueExists = true;
+								break;
+							}
+						}
+						if (!queueExists) {
+							JOptionPane.showMessageDialog(frame,
+								"Queue '" + queueToBrowse + "' is not in the current filtered list.\n" +
+								"Please select a queue from the list.",
+								"Queue Not Available",
+								JOptionPane.WARNING_MESSAGE);
+							return;
+						}
+					}
+					
+					if (queueToBrowse == null || queueToBrowse.isEmpty()) {
+						JOptionPane.showMessageDialog(frame,
+							"Please select a queue to browse.",
+							"No Queue Selected",
+							JOptionPane.WARNING_MESSAGE);
+						return;
+					}
+					
 					try {
-						onBrowse(selectedQueue, frame);
+						onBrowse(queueToBrowse, frame);
 					} catch (SempException | JCSMPException e1) {
-						e1.printStackTrace();
+						logger.error("Error browsing queue: " + e1.getMessage(), e1);
+						JOptionPane.showMessageDialog(frame,
+							"Error browsing queue: " + e1.getMessage(),
+							"Browse Error",
+							JOptionPane.ERROR_MESSAGE);
 					}
 				}
 			});
@@ -723,6 +800,18 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			frame.add(buttonPanel, BorderLayout.SOUTH);
 
 			frame.setVisible(true);
+			
+			// Apply initial filters and sorting after UI is fully visible
+			// This ensures User category filter is applied by default
+			SwingUtilities.invokeLater(() -> {
+				if (categoryUser != null && categoryUser.isSelected()) {
+					applyFiltersAndSorting();
+				} else {
+					// If for some reason categoryUser is not selected, apply filters anyway
+					// (this should not happen since we set it as default, but just in case)
+					applyFiltersAndSorting();
+				}
+			});
 	}
 	/**
 	 * Helper method to format broker info text with HTML wrapping
@@ -950,13 +1039,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			logger.info("Broker connection initialization completed successfully");
 			
 			// Refresh queue list
-			DefaultTableModel model = (DefaultTableModel) table.getModel();
-			model.setRowCount(0); // Clears all existing rows
-			
-			Object[][] newData = getTableData(queues);
-			for (Object[] rowData : newData) {
-				model.addRow(rowData); // Add new rows
-			}
+			applyFiltersAndSorting();
+			updateTable();
 			
 			// Clear selection and disable buttons
 			selectedQueue = "";
@@ -1048,17 +1132,21 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			model.setRowCount(0); // Clears all existing rows
 
 			try {
-				queues = sempV2ConfigClient.getAllQueueNames(broker.msgVpnName);
-				Collections.sort(queues);
-
-				Object[][] newData = getTableData(queues);// new String[][] {};
-				for (Object[] rowData : newData) {
-				    model.addRow(rowData); // Add new rows
+				// Fetch queue info with properties for filtering and sorting
+				allQueues = sempV2MonitorClient.getAllQueueInfo(broker.msgVpnName);
+				if (allQueues == null) {
+					allQueues = new ArrayList<QueueInfo>();
 				}
+				// Apply filters and sorting
+				applyFiltersAndSorting();
+				updateTable();
 
 			} catch (SempException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				logger.error("Failed to refresh queues: " + e.getMessage(), e);
+				JOptionPane.showMessageDialog(frame, 
+					"Failed to refresh queues: " + e.getMessage(),
+					"Refresh Failed",
+					JOptionPane.ERROR_MESSAGE);
 			}
 
 			frame.setCursor(Cursor.getDefaultCursor());
@@ -1118,9 +1206,20 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 
 	private String getSelectedQueue() {
-//		ListItem item = (ListItem) listBox.getSelectedValue();
-//		return item.text.trim();
-		return(String) table.getValueAt(table.getSelectedRow(), 1);
+		int selectedRow = table.getSelectedRow();
+		if (selectedRow < 0 || selectedRow >= table.getRowCount()) {
+			// No selection, return the stored selectedQueue if available
+			return (selectedQueue != null && !selectedQueue.isEmpty()) ? selectedQueue : null;
+		}
+		try {
+			String queueName = (String) table.getValueAt(selectedRow, 1);
+			// Update stored selectedQueue to match table selection
+			selectedQueue = queueName;
+			return queueName;
+		} catch (Exception e) {
+			logger.warn("Error getting selected queue from table: " + e.getMessage());
+			return (selectedQueue != null && !selectedQueue.isEmpty()) ? selectedQueue : null;
+		}
 	}
 	private void addButtons(JPanel buttonPanel) {
 		// Create left panel for main buttons
@@ -1198,9 +1297,11 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 	private String[] getListOfQueuesExceptCurrentlySelectedOne(String selectedQueue) {
 		List<String> tempList = new ArrayList<String>();
-		for (String oneStr : queues) {
-			if (oneStr.equals(selectedQueue) == false) {
-				tempList.add(oneStr);	
+		if (allQueues != null) {
+			for (QueueInfo info : allQueues) {
+				if (info.name != null && !info.name.equals(selectedQueue)) {
+					tempList.add(info.name);	
+				}
 			}
 		}
 		String[] options = (String[]) tempList.toArray(new String[0]);
@@ -1452,6 +1553,370 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 //		}
 //		return rc;
 //	}
+
+	/**
+	 * Creates the filter and sort panel with all UI components
+	 */
+	private JPanel createFilterSortPanel() {
+		JPanel panel = new JPanel();
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		panel.setBorder(BorderFactory.createTitledBorder("Filter & Sort"));
+		
+		// Search field
+		JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		searchPanel.add(new JLabel("Search:"));
+		searchField = new JTextField(20);
+		searchField.addActionListener(e -> applyFiltersAndSorting());
+		searchField.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) { applyFiltersAndSorting(); }
+			@Override
+			public void removeUpdate(DocumentEvent e) { applyFiltersAndSorting(); }
+			@Override
+			public void changedUpdate(DocumentEvent e) { applyFiltersAndSorting(); }
+		});
+		searchPanel.add(searchField);
+		panel.add(searchPanel);
+		
+		// Queue type filters
+		JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		typePanel.add(new JLabel("Type:"));
+		filterExclusive = new JCheckBox("Exclusive");
+		filterNonExclusive = new JCheckBox("Non-Exclusive");
+		filterPartitioned = new JCheckBox("Partitioned");
+		filterLastValue = new JCheckBox("Last Value");
+		filterExclusive.addActionListener(e -> applyFiltersAndSorting());
+		filterNonExclusive.addActionListener(e -> applyFiltersAndSorting());
+		filterPartitioned.addActionListener(e -> applyFiltersAndSorting());
+		filterLastValue.addActionListener(e -> applyFiltersAndSorting());
+		typePanel.add(filterExclusive);
+		typePanel.add(filterNonExclusive);
+		typePanel.add(filterPartitioned);
+		typePanel.add(filterLastValue);
+		panel.add(typePanel);
+		
+		// Category filter
+		JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		categoryPanel.add(new JLabel("Category:"));
+		categoryFilterGroup = new ButtonGroup();
+		categoryAll = new JRadioButton("All");
+		categoryUser = new JRadioButton("User", true); // Default to User
+		categorySystem = new JRadioButton("System");
+		categoryFilterGroup.add(categoryAll);
+		categoryFilterGroup.add(categoryUser);
+		categoryFilterGroup.add(categorySystem);
+		categoryAll.addActionListener(e -> applyFiltersAndSorting());
+		categoryUser.addActionListener(e -> applyFiltersAndSorting());
+		categorySystem.addActionListener(e -> applyFiltersAndSorting());
+		categoryPanel.add(categoryAll);
+		categoryPanel.add(categoryUser);
+		categoryPanel.add(categorySystem);
+		panel.add(categoryPanel);
+		
+		// Sort controls
+		JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		sortPanel.add(new JLabel("Sort by:"));
+		String[] sortOptions = {"Name", "Spool Size", "Spool Usage", "Spool Usage %"};
+		sortComboBox = new JComboBox<String>(sortOptions);
+		sortComboBox.setSelectedIndex(0);
+		sortComboBox.addActionListener(e -> {
+			logger.info("Sort combo box changed");
+			// Reapply filters and sorting to ensure we have the current filtered list
+			applyFiltersAndSorting();
+		});
+		sortPanel.add(sortComboBox);
+		sortAscDescButton = new JButton("↑");
+		sortAscDescButton.addActionListener(e -> {
+			sortAscending = !sortAscending;
+			sortAscDescButton.setText(sortAscending ? "↑" : "↓");
+			logger.info("Sort direction changed to: " + (sortAscending ? "ascending" : "descending"));
+			// Reapply filters and sorting to ensure we have the current filtered list
+			applyFiltersAndSorting();
+		});
+		sortPanel.add(sortAscDescButton);
+		panel.add(sortPanel);
+		
+		// Queue count label
+		queueCountLabel = new JLabel("");
+		queueCountLabel.setFont(new Font(queueCountLabel.getFont().getName(), Font.ITALIC, 11));
+		panel.add(queueCountLabel);
+		
+		return panel;
+	}
+	
+	/**
+	 * Applies all filters and sorting, then updates the table
+	 */
+	private void applyFiltersAndSorting() {
+		if (allQueues == null) {
+			allQueues = new ArrayList<QueueInfo>();
+		}
+		
+		// Apply filters
+		filteredQueues = new ArrayList<QueueInfo>(allQueues);
+		
+		// Search filter
+		String searchText = searchField != null ? searchField.getText().toLowerCase() : "";
+		if (!searchText.isEmpty()) {
+			filteredQueues = filteredQueues.stream()
+				.filter(q -> q.name != null && q.name.toLowerCase().contains(searchText))
+				.collect(Collectors.toCollection(ArrayList::new));
+		}
+		
+		// Queue type filters - apply OR logic (queues matching ANY selected type)
+		boolean hasTypeFilter = (filterExclusive != null && filterExclusive.isSelected()) ||
+			(filterNonExclusive != null && filterNonExclusive.isSelected()) ||
+			(filterPartitioned != null && filterPartitioned.isSelected()) ||
+			(filterLastValue != null && filterLastValue.isSelected());
+		
+		if (hasTypeFilter) {
+			filteredQueues = filteredQueues.stream()
+				.filter(q -> {
+					boolean matches = false;
+					if (filterExclusive.isSelected() && "exclusive".equalsIgnoreCase(q.accessType)) {
+						matches = true;
+					}
+					if (filterNonExclusive.isSelected() && "non-exclusive".equalsIgnoreCase(q.accessType)) {
+						matches = true;
+					}
+					if (filterPartitioned.isSelected() && q.partitionCount > 0) {
+						matches = true;
+					}
+					if (filterLastValue.isSelected() && q.maxMsgSpoolUsage == 0) {
+						matches = true;
+					}
+					return matches;
+				})
+				.collect(Collectors.toCollection(ArrayList::new));
+		}
+		
+		// Category filter
+		// Default to User if no category is explicitly selected (shouldn't happen, but safety check)
+		boolean userSelected = (categoryUser != null && categoryUser.isSelected());
+		boolean systemSelected = (categorySystem != null && categorySystem.isSelected());
+		boolean allSelected = (categoryAll != null && categoryAll.isSelected());
+		
+		if (userSelected) {
+			filteredQueues = filteredQueues.stream()
+				.filter(q -> q.name != null && !q.name.startsWith("#"))
+				.collect(Collectors.toCollection(ArrayList::new));
+		} else if (systemSelected) {
+			filteredQueues = filteredQueues.stream()
+				.filter(q -> q.name != null && q.name.startsWith("#"))
+				.collect(Collectors.toCollection(ArrayList::new));
+		}
+		// If "All" is selected or no selection (shouldn't happen), don't filter by category
+		
+		// Apply sorting - ensure we have a mutable ArrayList
+		if (!(filteredQueues instanceof ArrayList)) {
+			filteredQueues = new ArrayList<QueueInfo>(filteredQueues);
+		}
+		
+		// Apply sorting BEFORE updating table
+		applySorting();
+		
+		// Update table with sorted data
+		updateTable();
+	}
+	
+	/**
+	 * Applies sorting to filteredQueues
+	 */
+	private void applySorting() {
+		if (filteredQueues == null || filteredQueues.isEmpty()) {
+			logger.debug("applySorting: filteredQueues is null or empty");
+			return;
+		}
+		
+		// Ensure we have a mutable ArrayList
+		if (!(filteredQueues instanceof ArrayList)) {
+			filteredQueues = new ArrayList<QueueInfo>(filteredQueues);
+		}
+		
+		// If sortComboBox is not initialized yet, use default sort by name
+		String sortBy = "Name";
+		if (sortComboBox != null) {
+			Object selected = sortComboBox.getSelectedItem();
+			if (selected != null) {
+				sortBy = selected.toString();
+			}
+		}
+		
+		logger.debug("Applying sort: " + sortBy + " (ascending: " + sortAscending + "), queue count: " + filteredQueues.size());
+		
+		Comparator<QueueInfo> comparator = null;
+		
+		switch (sortBy) {
+			case "Name":
+				comparator = Comparator.comparing(q -> {
+					if (q.name == null) return "";
+					return q.name.toLowerCase();
+				}, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+				break;
+			case "Spool Size":
+				comparator = Comparator.comparingInt(q -> q.maxMsgSpoolUsage);
+				break;
+			case "Spool Usage":
+				comparator = Comparator.comparingInt(q -> q.msgSpoolUsage);
+				break;
+			case "Spool Usage %":
+				comparator = Comparator.comparingDouble(q -> {
+					// Calculate usage percentage: (msgSpoolUsage / maxMsgSpoolUsage) * 100
+					// Handle edge cases:
+					// - If maxMsgSpoolUsage is 0, return 0.0 (no spool allocated)
+					// - If msgSpoolUsage > maxMsgSpoolUsage, result will be > 1.0 (over 100%)
+					if (q.maxMsgSpoolUsage > 0) {
+						return (double)q.msgSpoolUsage / q.maxMsgSpoolUsage;
+					}
+					// If maxMsgSpoolUsage is 0 but msgSpoolUsage > 0, this is unusual
+					// Return a high value to sort these last (or first if descending)
+					if (q.msgSpoolUsage > 0) {
+						return Double.MAX_VALUE;
+					}
+					return 0.0;
+				});
+				break;
+			default:
+				// Default to name sorting
+				comparator = Comparator.comparing(q -> q.name != null ? q.name.toLowerCase() : "", 
+					Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+				break;
+		}
+		
+		if (comparator != null) {
+			if (!sortAscending) {
+				comparator = comparator.reversed();
+			}
+			// Create a new sorted list to ensure the sort is applied
+			// This is important because filteredQueues might be from a stream collect
+			List<QueueInfo> sortedList = new ArrayList<QueueInfo>(filteredQueues);
+			Collections.sort(sortedList, comparator);
+			
+			// Replace filteredQueues with the sorted list
+			filteredQueues.clear();
+			filteredQueues.addAll(sortedList);
+			
+			logger.debug("Sort applied successfully by: " + sortBy + " (ascending: " + sortAscending + ")");
+		} else {
+			logger.warn("No comparator created for sortBy: " + sortBy);
+		}
+	}
+	
+	/**
+	 * Updates the table with filtered and sorted queues
+	 */
+	private void updateTable() {
+		if (table == null) {
+			logger.warn("updateTable: table is null");
+			return;
+		}
+		
+		if (filteredQueues == null) {
+			logger.warn("updateTable: filteredQueues is null, creating empty list");
+			filteredQueues = new ArrayList<QueueInfo>();
+		}
+		
+		logger.info("updateTable: Updating table with " + filteredQueues.size() + " queues");
+		
+		// Save the currently selected queue name before clearing the table
+		String queueToReselect = null;
+		int currentSelectedRow = table.getSelectedRow();
+		if (currentSelectedRow >= 0 && currentSelectedRow < table.getRowCount()) {
+			try {
+				queueToReselect = (String) table.getValueAt(currentSelectedRow, 1);
+			} catch (Exception e) {
+				// If we can't get the selected queue, use the stored selectedQueue
+				queueToReselect = (selectedQueue != null && !selectedQueue.isEmpty()) ? selectedQueue : null;
+			}
+		} else {
+			// No row selected, but try to preserve the stored selectedQueue if it exists
+			queueToReselect = (selectedQueue != null && !selectedQueue.isEmpty()) ? selectedQueue : null;
+		}
+		
+		DefaultTableModel model = (DefaultTableModel) table.getModel();
+		model.setRowCount(0);
+		
+		// Ensure we have the latest filtered and sorted data
+		// Create a snapshot to ensure we're displaying the sorted order
+		List<QueueInfo> queuesToDisplay = new ArrayList<QueueInfo>(filteredQueues);
+		Object[][] newData = getTableData(queuesToDisplay);
+		logger.debug("updateTable: Created table data with " + newData.length + " rows");
+		
+		// Log first few queue names to verify sorting is applied (debug only)
+		if (logger.isDebugEnabled() && queuesToDisplay.size() > 0) {
+			String firstFew = "updateTable - Displaying first 3 queues: ";
+			for (int i = 0; i < Math.min(3, queuesToDisplay.size()); i++) {
+				firstFew += queuesToDisplay.get(i).name + " ";
+			}
+			logger.debug(firstFew);
+		}
+		
+		for (Object[] rowData : newData) {
+			model.addRow(rowData);
+		}
+		
+		// Reselect the previously selected queue if it still exists in the filtered/sorted list
+		boolean queueFound = false;
+		if (queueToReselect != null && !queueToReselect.isEmpty()) {
+			for (int i = 0; i < queuesToDisplay.size(); i++) {
+				if (queuesToDisplay.get(i).name != null && queuesToDisplay.get(i).name.equals(queueToReselect)) {
+					table.setRowSelectionInterval(i, i);
+					// Update selectedQueue to match the table selection
+					selectedQueue = queueToReselect;
+					// Ensure buttons are enabled if a queue is selected
+					if (browseButton != null) {
+						browseButton.setEnabled(true);
+						if (copyAllButton != null) copyAllButton.setEnabled(true);
+						if (deleteAllButton != null) deleteAllButton.setEnabled(true);
+						if (moveAllButton != null) moveAllButton.setEnabled(true);
+					}
+					queueFound = true;
+					logger.debug("updateTable: Reselected queue: " + queueToReselect + " at row " + i);
+					break;
+				}
+			}
+		}
+		
+		// If queue was not found in the filtered list, clear selection and disable buttons
+		if (!queueFound) {
+			table.clearSelection();
+			selectedQueue = "";
+			if (browseButton != null) {
+				browseButton.setEnabled(false);
+				if (copyAllButton != null) copyAllButton.setEnabled(false);
+				if (deleteAllButton != null) deleteAllButton.setEnabled(false);
+				if (moveAllButton != null) moveAllButton.setEnabled(false);
+			}
+			// Clear the queue details panel
+			if (detailsLabel != null) {
+				String placeholderFontFamily = (thisCfg != null && thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : Font.SANS_SERIF;
+				detailsLabel.setText("<html>"
+					+ "<div style='width: 280px; text-align: left; vertical-align:top; font-family: " + placeholderFontFamily + ";'>"
+					+ "<p>Select a queue on the left to see details.</p>"
+					+ "</div>"
+					+ "</html>");
+			}
+			// Hide the queue icon if it exists
+			if (qIconlabel != null) {
+				qIconlabel.setVisible(false);
+			}
+			if (queueToReselect != null && !queueToReselect.isEmpty()) {
+				logger.debug("updateTable: Queue " + queueToReselect + " was filtered out, selection cleared and details panel cleared");
+			}
+		}
+		
+		// Update queue count label
+		if (queueCountLabel != null && allQueues != null) {
+			queueCountLabel.setText("Showing " + filteredQueues.size() + " of " + allQueues.size() + " queues");
+		}
+		
+		// Force table repaint to ensure changes are visible
+		SwingUtilities.invokeLater(() -> {
+			table.revalidate();
+			table.repaint();
+			logger.debug("updateTable: Table repainted");
+		});
+	}
 
 	public static void main(String[] args) throws BrokerException {
 		// Initialize FlatLaf before any GUI components
