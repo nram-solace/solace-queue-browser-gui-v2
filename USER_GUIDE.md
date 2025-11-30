@@ -86,9 +86,7 @@ The system configuration is loaded first, followed by the user configuration fil
 
 #### System Configuration File (`config/system.json`)
 
-**REQUIRED**: The system configuration file is mandatory. The application will exit with an error if this file doesn't exist or fails to load/parse.
-
-**WARNING**: DONOT modify this file unless you are sure what you are doing. 
+**WARNING**: DONOT rename or modify this file. 
 
 ```json
 {
@@ -112,9 +110,7 @@ The system configuration is loaded first, followed by the user configuration fil
 
 #### User Configuration File Format
 
-User configuration files contain **only** broker connection information. The `eventBrokers` array format is required - the legacy single `eventBroker` object format is no longer supported.
-
-**REQUIRED FORMAT**: User configuration files must use the `eventBrokers` array format:
+User configuration files contain **only** broker connection information. This file supports multiple broker connections in a list. 
 
 ```json
 {
@@ -140,10 +136,6 @@ User configuration files contain **only** broker connection information. The `ev
 - If processing the configuration fails, the application exits with: "Failed to process user configuration: [error]"
 - If processing `eventBrokers` fails, the application exits with: "Failed to process eventBrokers configuration: [error]"
 
-**Legacy Format No Longer Supported:**
-- The old `eventBroker` (singular) object format is no longer supported
-- Users must migrate to the `eventBrokers` array format
-- Single broker configurations should wrap the broker object in an array: `"eventBrokers": [{...}]`
 
 **Broker Configuration (`eventBrokers` array):**
 
