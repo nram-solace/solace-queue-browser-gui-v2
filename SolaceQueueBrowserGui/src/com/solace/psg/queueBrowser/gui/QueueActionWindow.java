@@ -176,7 +176,7 @@ public class QueueActionWindow extends JPanel {
 							boolean axeIt = false;
 							if (eActionSelected == eAction.eDelete) {
 								// Delete operation
-				    			String logMsg = "MessageId " + msg.getMessageId() + " was deleted from the '" + srcQName + "' queue.";
+				    			String logMsg = "MessageId " + msg.getMessageId() + " deleted from '" + srcQName + "' queue.";
 				    			CommandLog.instance().log(logMsg);
 			    				axeIt = true;
 							} else {
@@ -188,8 +188,8 @@ public class QueueActionWindow extends JPanel {
 				    			if (eActionSelected == eAction.eCopy) {
 				    				action = "copied";
 				    			}
-				    			String logMsg = "MessageId " + msg.getMessageId() + " (replication id='" + replicationId.toString() + "') was " + action + 
-				    					" from the '" + srcQName + "' queue to the '" + tarQName + "'.";
+				    			String logMsg = "MessageId " + msg.getMessageId() + " (replication id='" + replicationId.toString() + "') " + action + 
+				    					" from '" + srcQName + "' queue to '" + tarQName + "'.";
 				    			CommandLog.instance().log(logMsg);
 				    			if (eActionSelected == eAction.eMove) {
 				    				axeIt = true;

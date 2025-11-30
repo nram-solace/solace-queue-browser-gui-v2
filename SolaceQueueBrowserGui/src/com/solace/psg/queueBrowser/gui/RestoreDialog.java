@@ -831,7 +831,7 @@ public class RestoreDialog {
 						try {
 							publisher.publishMessage(targetQueue, msg);
 							successCount++;
-							String logMsg = "MessageId " + msg.messageId + " was restored to queue '" + targetQueue + "'.";
+							String logMsg = "MessageId " + msg.messageId + " restored to queue '" + targetQueue + "'.";
 							CommandLog.instance().log(logMsg);
 							logger.info("performRestore: Successfully restored messageId={}", msg.messageId);
 						} catch (BrokerException e) {

@@ -1049,8 +1049,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		System.out.println("moveOrCopyMessage: SEMP copy operation completed for messageId=" + id);
 
 		String actionPastTense = deleteFromSource ? "moved" : "copied";
-		String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + actionPastTense +
-				" from the '" + this.queue + "' queue to the '" + selectedTargetQueue + "'.";
+		String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') " + actionPastTense +
+				" from '" + this.queue + "' queue to '" + selectedTargetQueue + "'.";
 		CommandLog.instance().log(logMsg);
 
 		if (showStatus) {
@@ -1296,6 +1296,10 @@ public class BrowserDialog implements IDragDropInstigator {
         deleteFile(headersFile);
         deleteFile(userPropsFile);
         
+        // Log download to command.log
+        String logMsg = "MessageId " + id + " downloaded from '" + this.queue + "' queue to '" + zipFileName + "'.";
+        CommandLog.instance().log(logMsg);
+        
         if (showStatus) {
         	setStatus("Downloaded message " + id + " to " + zipFileName) ;
         }
@@ -1390,7 +1394,7 @@ public class BrowserDialog implements IDragDropInstigator {
         		ids.add(id);
         		try {
         			this.browser.delete(id);
-        			String logMsg = "MessageId " + id + " was deleted from the '" + this.queue + "' queue.";
+        			String logMsg = "MessageId " + id + " deleted from '" + this.queue + "' queue.";
         			CommandLog.instance().log(logMsg);
         			successfulIds.add(id);
         		} catch (Exception e) {
@@ -2453,8 +2457,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		setStatus("Message " + msg.id + " was moved from " + msg.queue + " to " + msg.targetQueue);
 		
 		
-		String logMsg = "MessageId " + msg.id + " (replication id='" + msg.replicationId.toString() + "') was moved " +  
-				" from the '" + msg.queue + "' queue to the '" + msg.targetQueue + "'.";
+		String logMsg = "MessageId " + msg.id + " (replication id='" + msg.replicationId.toString() + "') moved " +  
+				" from '" + msg.queue + "' queue to '" + msg.targetQueue + "'.";
 		CommandLog.instance().log(logMsg);
 		
 		//onNextMessage(this.table);		
