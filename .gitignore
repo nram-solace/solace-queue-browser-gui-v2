@@ -11,6 +11,7 @@ SolaceQueueBrowserGui/target/generated-sources/
 SolaceQueueBrowserGui/target/maven-archiver/
 SolaceQueueBrowserGui/target/maven-status/
 SolaceQueueBrowserGui/logs/
+SolaceQueueBrowserGui/downloads/***
 
 *.pdn
 requirements.txt
@@ -62,7 +63,7 @@ Thumbs.db
 SolaceQueueBrowserGui-v0/
 SolaceQueueBrowserGui-v1/
 SolaceQueueBrowserGui-main/
-SolaceQueueBrowserGui/
+#SolaceQueueBrowserGui/
 # exclude local files
 nram/**
 .claude/**
@@ -70,4 +71,5 @@ nram/**
 .antigravity/**
 out/**
 tmp/**
-.specs/**
+.#specs/**
+.password

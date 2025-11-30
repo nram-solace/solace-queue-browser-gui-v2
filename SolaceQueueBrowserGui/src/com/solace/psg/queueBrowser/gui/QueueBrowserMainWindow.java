@@ -86,6 +86,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private JButton browseButton;
 	private JButton copyAllButton;
 	private JButton deleteAllButton;
+	private JButton restoreButton;
 	private JButton exitButton;
 
 	private IconicTableCellRenderer iconCellRenderer;
@@ -537,6 +538,16 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 					onDeleteAll(selectedQueue, frame);
 				}
 
+			});
+
+			restoreButton = new JButton("Restore");
+			restoreButton.setEnabled(false);
+			restoreButton.setBackground(new Color(220, 255, 220)); // Soft green background
+			restoreButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					onRestore(selectedQueue, frame);
+				}
 			});
 
 			refreshButton = new JButton("Refresh");
@@ -1049,6 +1060,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			copyAllButton.setEnabled(false);
 			deleteAllButton.setEnabled(false);
 			moveAllButton.setEnabled(false);
+			restoreButton.setEnabled(false);
 			
 			// Reset details label
 			String placeholderFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : Font.SANS_SERIF;
@@ -1193,6 +1205,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		copyAllButton.setEnabled(true);
 		deleteAllButton.setEnabled(true);
 		moveAllButton.setEnabled(true);
+		restoreButton.setEnabled(true);
 		
 		try {
 			this.onQueueNameSelected(selectedQueue, detailsLabel, buttonPanel);
@@ -1229,6 +1242,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		leftButtonPanel.add(copyAllButton);
 		leftButtonPanel.add(moveAllButton);
 		leftButtonPanel.add(deleteAllButton);
+		leftButtonPanel.add(restoreButton);
 		leftButtonPanel.add(new JLabel("  |  "));
 		leftButtonPanel.add(refreshButton);
 		
@@ -1384,6 +1398,19 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			}
 		}
 	}
+
+	private void onRestore(String selectedQueue, JFrame frame) {
+		try {
+			RestoreDialog restoreDialog = new RestoreDialog(frame, broker, selectedQueue, thisCfg);
+			restoreDialog.run();
+		} catch (Exception e) {
+			logger.error("Error opening restore dialog: " + e.getMessage(), e);
+			JOptionPane.showMessageDialog(frame,
+				"Error opening restore dialog: " + e.getMessage(),
+				"Restore Error",
+				JOptionPane.ERROR_MESSAGE);
+		}
+	}
 	 public static String splitCamelCase(String str) {
 	        // Use a regular expression to split camelCase
 	        String[] words = str.split("(?=[A-Z])"); // Matches positions before uppercase letters
@@ -1490,6 +1517,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		copyAllButton.setEnabled(true);
 		deleteAllButton.setEnabled(true);
 		moveAllButton.setEnabled(true);
+		restoreButton.setEnabled(true);
 		
 		buttonPanel.removeAll();
 		this.addButtons(buttonPanel);
@@ -1500,6 +1528,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		copyAllButton.setEnabled(true);
 		deleteAllButton.setEnabled(true);
 		moveAllButton.setEnabled(true);
+		restoreButton.setEnabled(true);
 		
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
@@ -1508,6 +1537,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				copyAllButton.setEnabled(true);
 				deleteAllButton.setEnabled(true);
 				moveAllButton.setEnabled(true);
+				restoreButton.setEnabled(true);
 				buttonPanel.revalidate();
 				buttonPanel.repaint();
 			}
@@ -1876,6 +1906,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 						if (copyAllButton != null) copyAllButton.setEnabled(true);
 						if (deleteAllButton != null) deleteAllButton.setEnabled(true);
 						if (moveAllButton != null) moveAllButton.setEnabled(true);
+						if (restoreButton != null) restoreButton.setEnabled(true);
 					}
 					queueFound = true;
 					logger.debug("updateTable: Reselected queue: " + queueToReselect + " at row " + i);
@@ -1893,6 +1924,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				if (copyAllButton != null) copyAllButton.setEnabled(false);
 				if (deleteAllButton != null) deleteAllButton.setEnabled(false);
 				if (moveAllButton != null) moveAllButton.setEnabled(false);
+				if (restoreButton != null) restoreButton.setEnabled(false);
 			}
 			// Clear the queue details panel
 			if (detailsLabel != null) {

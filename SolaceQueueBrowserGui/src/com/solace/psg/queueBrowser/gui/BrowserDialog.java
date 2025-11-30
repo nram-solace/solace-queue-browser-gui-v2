@@ -814,29 +814,15 @@ public class BrowserDialog implements IDragDropInstigator {
 		// Try to load messages - if this fails, show error dialog
 		// Use the same pattern as restartAfterFilter: set nCurPage to 0 and call onNextPage
 		// This ensures consistent behavior with refresh
-		logBoth("*** INITIAL LOAD: Setting up invokeLater for initial message load ***");
-		logBothWithThread("*** INITIAL LOAD: Before invokeLater, current thread ***");
 		SwingUtilities.invokeLater(() -> {
 			try {
-				logBothWithThread("*** INITIAL LOAD: invokeLater callback started ***");
-				logBoth("*** INITIAL LOAD: Current nCurPage = " + nCurPage + 
-					", tableModel rowCount = " + tableModel.getRowCount() + 
-					", dialog visible = " + dialog.isVisible() + " ***");
 				dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 				
 				// Use the exact same pattern as restartAfterFilter
-				logBoth("*** INITIAL LOAD: Clearing table model (current rowCount = " + tableModel.getRowCount() + ") ***");
 				tableModel.setRowCount(0);
-				logBoth("*** INITIAL LOAD: Table model cleared, rowCount = " + tableModel.getRowCount() + " ***");
-				logBoth("*** INITIAL LOAD: Calling preFetch() ***");
 				preFetch();
-				logBoth("*** INITIAL LOAD: preFetch() completed, Setting nCurPage = 0 (was " + nCurPage + ") ***");
 				nCurPage = 0;
-				logBoth("*** INITIAL LOAD: nCurPage set to " + nCurPage + ", Calling onNextPage() ***");
-				logBoth("*** INITIAL LOAD: nextPageButton = " + (nextPageButton != null ? "not null" : "null") + 
-					", enabled = " + (nextPageButton != null ? nextPageButton.isEnabled() : "N/A") + " ***");
 				onNextPage(dialog, tableModel, nextPageButton); // Match restartAfterFilter exactly
-				logBoth("*** INITIAL LOAD: onNextPage() completed, tableModel rowCount = " + tableModel.getRowCount() + " ***");
 				
 			} catch (Exception e) {
 				logBoth("*** INITIAL LOAD: Exception occurred: " + e.getMessage() + " ***");
@@ -850,7 +836,6 @@ public class BrowserDialog implements IDragDropInstigator {
 				dialog.dispose(); // Close the empty dialog
 			} finally {
 				dialog.setCursor(Cursor.getDefaultCursor());
-				logBoth("*** INITIAL LOAD: invokeLater callback completed ***");
 			}
 		});
 	}
@@ -901,11 +886,6 @@ public class BrowserDialog implements IDragDropInstigator {
 		
 	}
 	private void restartAfterFilter(String title) {
-		logBothWithThread("*** FUNCTION CALL: restartAfterFilter('" + title + "') - START ***");
-		logBoth("*** restartAfterFilter: Current nCurPage = " + nCurPage + 
-			", tableModel rowCount = " + tableModel.getRowCount() + 
-			", filterStatus = " + (spec.isEmpty() ? "OFF" : "ON") + " ***");
-
 		SpinnerDialog spinner = new SpinnerDialog(dialog, title);
 
 		// Update filter status label - just show ON or OFF
@@ -914,33 +894,23 @@ public class BrowserDialog implements IDragDropInstigator {
 			filterStatusLabel.setText("(" + filterStatus + ")");
 		}
 
-		logBoth("*** restartAfterFilter: Clearing table model ***");
 		tableModel.setRowCount(0);
 		
 		// If filter is active, adjust page size using heuristic BEFORE preFetch/onNextPage
 		// This ensures browser is reinitialized with correct page size before loading messages
 		if (!spec.isEmpty() && browser != null) {
-			logBoth("*** restartAfterFilter: Filter is active, calling adjustPageSizeForFilter() ***");
 			adjustPageSizeForFilter();
-		} else {
-			logBoth("*** restartAfterFilter: Filter check - spec.isEmpty()=" + spec.isEmpty() + 
-				", browser=" + (browser != null ? "not null" : "null") + " ***");
 		}
 		
-		logBoth("*** restartAfterFilter: Calling preFetch() ***");
 		preFetch();
-		logBoth("*** restartAfterFilter: Setting nCurPage = 0 ***");
 		nCurPage = 0;
 		
-		logBoth("*** restartAfterFilter: Calling onNextPage() ***");
 		onNextPage(dialog, tableModel, nextPageButton);
-		logBoth("*** restartAfterFilter: onNextPage() completed ***");
 		
 		// Recalculate page count after refresh/filter
 		recalculateEstimatedPageCount();
 
 		spinner.setVisible(false);
-		logBoth("*** FUNCTION CALL: restartAfterFilter('" + title + "') - END ***");
 	}
 
 	private void updateSelectAllCheckBoxState() {
@@ -973,18 +943,10 @@ public class BrowserDialog implements IDragDropInstigator {
 	}
 	
 	private void autoSelectFirstRow() {
-		logBoth("*** FUNCTION CALL: autoSelectFirstRow() - START ***");
-		logBoth("*** autoSelectFirstRow: table rowCount = " + table.getRowCount() + 
-			", tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		if (table.getRowCount() > 0) {
 			table.setRowSelectionInterval(0, 0);
-			logBoth("*** autoSelectFirstRow: Row 0 selected, Calling onSelectMessage() ***");
 			onSelectMessage(table, 0);
-			logBoth("*** autoSelectFirstRow: onSelectMessage() completed ***");
-		} else {
-			logBoth("*** autoSelectFirstRow: WARNING - table rowCount = 0, cannot select first row ***");
 		}
-		logBoth("*** FUNCTION CALL: autoSelectFirstRow() - END ***");
 	}
 	
 	private void onMoveMessage() {
@@ -996,23 +958,29 @@ public class BrowserDialog implements IDragDropInstigator {
 	
 	private void moveOrCopy(boolean deleteFromSource) {
 		ArrayList<String> ids = getAllSelectedMessageIds();
+		String action = deleteFromSource ? "move" : "copy";
+		System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Called, selectedMessageIds.size()=" + ids.size());
+		System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": selectedMessageIds=" + ids);
+		
 		ArrayList<String> successfulIds = new ArrayList<String>();
 		ArrayList<String> failedIds = new ArrayList<String>();
 		
 		if (ids.size() > 1) {
-			for (String id : ids) {
+			System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Processing " + ids.size() + " messages");
+			for (int i = 0; i < ids.size(); i++) {
+				String id = ids.get(i);
+				System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Processing message " + (i+1) + "/" + ids.size() + ": messageId=" + id);
 				try {
 					moveOrCopyMessage(id, deleteFromSource, false);
 					successfulIds.add(id);
+					System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Successfully " + action + "ed messageId=" + id);
 				} catch (Exception e) {
 					failedIds.add(id);
-					logger.error("Failed to " + (deleteFromSource ? "move" : "copy") + " message " + id, e);
+					System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Failed to " + action + " messageId=" + id + ", error=" + e.getMessage());
+					logger.error("Failed to " + action + " message " + id, e);
 				}
 			}
-			String action = "copied";
-			if (deleteFromSource == true) {
-				action = "moved";
-			}
+			action = deleteFromSource ? "moved" : "copied";
 			String selectedTargetQueue = (String) comboBox.getSelectedItem();
 			
 			// Show confirmation dialog
@@ -1043,10 +1011,12 @@ public class BrowserDialog implements IDragDropInstigator {
 		}
 		else {
 			String id = ids.get(0);
+			System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Processing single message: messageId=" + id);
 			try {
 				moveOrCopyMessage(id, deleteFromSource, true);
-				String action = deleteFromSource ? "moved" : "copied";
+				action = deleteFromSource ? "moved" : "copied";
 				String selectedTargetQueue = (String) comboBox.getSelectedItem();
+				System.out.println("on" + (deleteFromSource ? "Move" : "Copy") + ": Successfully " + action + " messageId=" + id + " to queue=" + selectedTargetQueue);
 				
 				// Show confirmation dialog
 				String message = "Message " + id + " successfully " + action + 
@@ -1059,26 +1029,27 @@ public class BrowserDialog implements IDragDropInstigator {
 					unselectMessages(ids);
 				}
 			} catch (Exception e) {
-				String action = deleteFromSource ? "move" : "copy";
+				String actionVerb = deleteFromSource ? "move" : "copy";
 				JOptionPane.showMessageDialog(dialog, 
-					"Failed to " + action + " message " + id + ".\n" + e.getMessage(),
+					"Failed to " + actionVerb + " message " + id + ".\n" + e.getMessage(),
 					"Operation Failed", JOptionPane.ERROR_MESSAGE);
-				logger.error("Failed to " + action + " message " + id, e);
+				logger.error("Failed to " + actionVerb + " message " + id, e);
 			}
 		}
 	}
 	private void moveOrCopyMessage(String id, boolean deleteFromSource, boolean showStatus) throws SempException {
 		String selectedTargetQueue = (String) comboBox.getSelectedItem();
+		String actionVerb = deleteFromSource ? "move" : "copy";
+		System.out.println("moveOrCopyMessage: Starting " + actionVerb + " for messageId=" + id + ", sourceQueue=" + queue + ", targetQueue=" + selectedTargetQueue);
 
 		BytesXMLMessage msg = browser.get(id);
 		ReplicationGroupMessageId replicationId = msg.getReplicationGroupMessageId();
+		System.out.println("moveOrCopyMessage: Got message, replicationId=" + replicationId.toString());
 		sempV2ActionClient.copy(broker.msgVpnName, queue, selectedTargetQueue, replicationId.toString());
+		System.out.println("moveOrCopyMessage: SEMP copy operation completed for messageId=" + id);
 
-		String action = "copied";
-		if (deleteFromSource == true) {
-			action = "moved";
-		}
-		String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + action +
+		String actionPastTense = deleteFromSource ? "moved" : "copied";
+		String logMsg = "MessageId " + id + " (replication id='" + replicationId.toString() + "') was " + actionPastTense +
 				" from the '" + this.queue + "' queue to the '" + selectedTargetQueue + "'.";
 		CommandLog.instance().log(logMsg);
 
@@ -1087,7 +1058,9 @@ public class BrowserDialog implements IDragDropInstigator {
 		}
 		
 		if (deleteFromSource) {
+			System.out.println("moveOrCopyMessage: Deleting messageId=" + id + " from source queue (move operation)");
 			browser.delete(id);
+			System.out.println("moveOrCopyMessage: MessageId=" + id + " deleted from source queue");
 			// For single message moves, remove the row immediately
 			if (showStatus) {
 				int selectedRow = table.getSelectedRow();
@@ -1191,16 +1164,24 @@ public class BrowserDialog implements IDragDropInstigator {
 
 	private void onDownloadMessage() {
 		ArrayList<String> ids = getAllSelectedMessageIds();
+		System.out.println("onDownload: Called, selectedMessageIds.size()=" + ids.size());
+		System.out.println("onDownload: selectedMessageIds=" + ids);
+		
 		ArrayList<String> successfulIds = new ArrayList<String>();
 		ArrayList<String> failedIds = new ArrayList<String>();
 		
 		if (ids.size() > 1) {
-			for (String id : ids) {
+			System.out.println("onDownload: Processing " + ids.size() + " messages");
+			for (int i = 0; i < ids.size(); i++) {
+				String id = ids.get(i);
+				System.out.println("onDownload: Processing message " + (i+1) + "/" + ids.size() + ": messageId=" + id);
 				try {
 					downloadMessage(id, false);
 					successfulIds.add(id);
+					System.out.println("onDownload: Successfully downloaded messageId=" + id);
 				} catch (Exception e) {
 					failedIds.add(id);
+					System.out.println("onDownload: Failed to download messageId=" + id + ", error=" + e.getMessage());
 					logger.error("Failed to download message " + id, e);
 				}
 			}
@@ -1234,8 +1215,10 @@ public class BrowserDialog implements IDragDropInstigator {
 		}
 		else {
 			String id = ids.get(0);
+			System.out.println("onDownload: Processing single message: messageId=" + id);
 			try {
 				String zipFileName = downloadMessage(id, true);
+				System.out.println("onDownload: Successfully downloaded messageId=" + id + " to file=" + zipFileName);
 				
 				// Show confirmation dialog
 				String message = "Message " + id + " successfully downloaded to:\n" + zipFileName;
@@ -1254,11 +1237,14 @@ public class BrowserDialog implements IDragDropInstigator {
 	}
 	
 	private String downloadMessage(String id, boolean showStatus) throws Exception {
+		System.out.println("downloadMessage: Starting download for messageId=" + id);
 		//String id = getMessageIdOfSelectedRow();
 		BytesXMLMessage message = this.browser.get(id);
+		System.out.println("downloadMessage: Retrieved message from browser for messageId=" + id);
 		String payload = browser.getPayload(message);
 		String[][] headers = getMessageHeadersData(message);
 		String[][] userProps = getMessageUserPropsData(message);
+		System.out.println("downloadMessage: Extracted payload, headers, and userProps for messageId=" + id);
 		
 		// Get broker hostname (use fqdn() if available, otherwise use name)
 		String brokerHostname = this.broker.fqdn();
@@ -1295,6 +1281,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		String timestamp = formatter.format(when);
 		
 		String zipFileName = folder + "/msg-" + id + "-" + timestamp + ".zip";
+		System.out.println("downloadMessage: Creating ZIP file=" + zipFileName + " for messageId=" + id);
 
         FileOutputStream fos = new FileOutputStream(zipFileName);
         ZipOutputStream zipOut = new ZipOutputStream(fos);
@@ -1303,6 +1290,7 @@ public class BrowserDialog implements IDragDropInstigator {
         addToZip(zipOut, userPropsFile);
         zipOut.close();
         fos.close();
+        System.out.println("downloadMessage: ZIP file created successfully for messageId=" + id + ", file=" + zipFileName);
 
         deleteFile(payloadFile);
         deleteFile(headersFile);
@@ -1718,15 +1706,9 @@ public class BrowserDialog implements IDragDropInstigator {
 	boolean cantBrowseWarningIssuedAlready = false;
 	boolean smfConnectionErrorShown = false; // Track if we've already shown SMF error
 	private void preFetch() {
-		logBothWithThread("*** FUNCTION CALL: preFetch() - START ***");
-		logBoth("*** preFetch: browser = " + (browser != null ? "not null" : "null") + 
-			", current nCurPage = " + nCurPage + " ***");
 		try {
-			logBoth("*** preFetch: Acquiring semaphore ***");
 			semaphore.acquire();
-			logBoth("*** preFetch: Semaphore acquired, Calling browser.prefetchNextPage() ***");
 			browser.prefetchNextPage();
-			logBoth("*** preFetch: browser.prefetchNextPage() completed successfully ***");
 		} catch (BrokerException e) {
 			if (e.getMessage() != null && e.getMessage().contains("Browsing Not Supported on Partitioned Queue")) {
 				if (! cantBrowseWarningIssuedAlready) {
@@ -1768,8 +1750,6 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		} finally {
 			semaphore.release();
-			logBoth("*** preFetch: Semaphore released ***");
-			logBothWithThread("*** FUNCTION CALL: preFetch() - END ***");
 		}
 	}
 
@@ -2108,11 +2088,6 @@ public class BrowserDialog implements IDragDropInstigator {
 				estimatedPageCount = 1;
 			}
 			
-			logBoth("*** recalculateEstimatedPageCount: No filter, estimatedTotalMessageCount=" + estimatedTotalMessageCount + 
-				", nItemsPerPage=" + nItemsPerPage + 
-				", new estimatedPageCount=" + estimatedPageCount + " ***");
-		} else {
-			logBoth("*** recalculateEstimatedPageCount: Filter active, page count handled in onPageChange() ***");
 		}
 		
 		// Update the UI label (will use filter-aware logic if filter is active)
@@ -2125,14 +2100,8 @@ public class BrowserDialog implements IDragDropInstigator {
 	 * without scanning the entire queue to determine exact filtered count.
 	 */
 	private void adjustPageSizeForFilter() {
-		logBoth("*** FUNCTION CALL: adjustPageSizeForFilter() - START ***");
-		logBoth("*** adjustPageSizeForFilter: spec.isEmpty()=" + spec.isEmpty() + 
-			", browser=" + (browser != null ? "not null" : "null") + 
-			", current nItemsPerPage=" + nItemsPerPage + " ***");
-		
 		// Only adjust if a filter is active
 		if (spec.isEmpty() || browser == null) {
-			logBoth("*** adjustPageSizeForFilter: Early return - filter not active or browser null ***");
 			return;
 		}
 		
@@ -2141,23 +2110,16 @@ public class BrowserDialog implements IDragDropInstigator {
 		// without needing to scan the entire queue
 		int heuristicPageSize = 20;
 		
-		logBoth("*** adjustPageSizeForFilter: heuristicPageSize=" + heuristicPageSize + 
-			", current nItemsPerPage=" + nItemsPerPage + " ***");
-		
 		// Always set to heuristic value when filter is applied
 		// This ensures consistent page size for filtered results
 		boolean pageSizeChanged = (nItemsPerPage != heuristicPageSize);
 		
 		if (pageSizeChanged) {
-			logBoth("*** adjustPageSizeForFilter: Filter applied, adjusting page size from " + 
-				nItemsPerPage + " to heuristic value " + heuristicPageSize + " ***");
-			
 			// Update page size
 			nItemsPerPage = heuristicPageSize;
 			
 			// Update the combo box without triggering refresh
 			if (cboMsgsPerPage != null) {
-				logBoth("*** adjustPageSizeForFilter: Updating combo box to " + heuristicPageSize + " ***");
 				// Temporarily remove listener to avoid triggering refresh
 				ActionListener[] listeners = cboMsgsPerPage.getActionListeners();
 				for (ActionListener listener : listeners) {
@@ -2170,55 +2132,31 @@ public class BrowserDialog implements IDragDropInstigator {
 				for (ActionListener listener : listeners) {
 					cboMsgsPerPage.addActionListener(listener);
 				}
-				logBoth("*** adjustPageSizeForFilter: Combo box updated successfully ***");
-			} else {
-				logBoth("*** adjustPageSizeForFilter: WARNING - cboMsgsPerPage is null ***");
 			}
-		} else {
-			logBoth("*** adjustPageSizeForFilter: Page size already at heuristic value " + heuristicPageSize + 
-				", no combo box update needed ***");
 		}
 		
 		// Always reinitialize browser when filter is applied (even if page size unchanged)
 		// This ensures browser has the correct filter and page size settings
 		try {
-			logBoth("*** adjustPageSizeForFilter: Reinitializing browser with page size " + nItemsPerPage + 
-				" (pageSizeChanged=" + pageSizeChanged + ") ***");
 			initialize(); // Recreates browser with current page size and filter
-			logBoth("*** adjustPageSizeForFilter: Browser reinitialized successfully ***");
 			// Recalculate page count with current size (will use cached count or heuristic for filtered results)
 			recalculateEstimatedPageCount();
 		} catch (SempException e) {
-			logBoth("*** adjustPageSizeForFilter: ERROR - Failed to reinitialize browser: " + e.getMessage() + " ***");
 			logger.error("Failed to reinitialize browser with new page size", e);
 		}
-		
-		logBoth("*** FUNCTION CALL: adjustPageSizeForFilter() - END ***");
 	}
 
 	private void display(DefaultTableModel tableModel, Object[][] dataUpdate) {
-		logBothWithThread("*** FUNCTION CALL: display() - START ***");
-		logBoth("*** display: dataUpdate.length = " + (dataUpdate != null ? dataUpdate.length : 0) + 
-			", tableModel rowCount before = " + tableModel.getRowCount() + " ***");
 		tableModel.setRowCount(0);
 		numberOfMessagesOnTheCurrentPage = 0;
-		logBoth("*** display: Table model cleared, numberOfMessagesOnTheCurrentPage reset to 0 ***");
-		int rowsAdded = 0;
 		for (Object[] oneRow : dataUpdate) {
 			tableModel.addRow(oneRow);
 			lastIdAdded = (String) oneRow[nIdColumn];
 			numberOfMessagesOnTheCurrentPage++;
-			rowsAdded++;
 		}
-		logBoth("*** display: Added " + rowsAdded + " rows to tableModel, rowCount now = " + tableModel.getRowCount() + 
-			", lastIdAdded = " + (lastIdAdded != null ? lastIdAdded : "null") + " ***");
 		
 		if (dataUpdate.length > 0) {
-			logBoth("*** display: dataUpdate.length > 0, Calling autoSelectFirstRow() ***");
 			autoSelectFirstRow();
-			logBoth("*** display: autoSelectFirstRow() completed ***");
-		} else {
-			logBoth("*** display: dataUpdate.length = 0, skipping autoSelectFirstRow() ***");
 		}
 		
 		// Update select-all checkbox state after table is populated
@@ -2227,7 +2165,6 @@ public class BrowserDialog implements IDragDropInstigator {
 		// If filter is active, recalculate page count after displaying messages
 		// This updates the page count based on cached messages (more accurate than total queue count)
 		if (!spec.isEmpty() && browser != null) {
-			logBoth("*** display: Filter active, recalculating page count based on cached messages ***");
 			recalculateEstimatedPageCount();
 		}
 		
@@ -2236,29 +2173,16 @@ public class BrowserDialog implements IDragDropInstigator {
 		if (nextPageButton != null) {
 			boolean shouldEnable = shouldNextPageButtonBeActive();
 			nextPageButton.setEnabled(shouldEnable);
-			logBoth("*** display: Updated nextPageButton enabled=" + shouldEnable + 
-				" (numberOfMessagesOnTheCurrentPage=" + numberOfMessagesOnTheCurrentPage + 
-				", nItemsPerPage=" + nItemsPerPage + ") ***");
 		}
-		
-		logBoth("*** display: numberOfMessagesOnTheCurrentPage = " + numberOfMessagesOnTheCurrentPage + 
-			", tableModel final rowCount = " + tableModel.getRowCount() + " ***");
-		logBothWithThread("*** FUNCTION CALL: display() - END ***");
 	}
 
 	private void onPreviousPage(JDialog dialog, DefaultTableModel tableModel, JButton backButton) {
-		logBothWithThread("*** FUNCTION CALL: onPreviousPage() - START ***");
-		logBoth("*** onPreviousPage: Current nCurPage = " + nCurPage + 
-			", tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		nCurPage--;
-		logBoth("*** onPreviousPage: Decremented nCurPage to " + nCurPage + " ***");
 		
 		Object[][] dataUpdate = null;
 		try {
-			logBoth("*** onPreviousPage: Calling getMessages() ***");
 			dataUpdate = this.getMessages();
-			logBoth("*** onPreviousPage: getMessages() returned " + (dataUpdate != null ? dataUpdate.length : 0) + " messages ***");
 		} catch (BrokerException e) {
 			// Show error dialog if SMF connection fails
 			String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
@@ -2279,9 +2203,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			e.printStackTrace();
 			dataUpdate = new Object[0][];
 		} 
-		logBoth("*** onPreviousPage: Calling display() with " + (dataUpdate != null ? dataUpdate.length : 0) + " rows ***");
 		display(tableModel, dataUpdate);
-		logBoth("*** FUNCTION CALL: onPreviousPage() - END ***");
 
 		if (nCurPage < 2) {
 			backButton.setEnabled(false);
@@ -2306,13 +2228,11 @@ public class BrowserDialog implements IDragDropInstigator {
 		
 		// If no messages on current page, disable Next button
 		if (numberOfMessagesOnTheCurrentPage == 0) {
-			logBoth("*** shouldNextPageButtonBeActive: No messages on current page, disabling Next button ***");
 			return false;
 		}
 		
 		// Need lastIdAdded to check for more messages
 		if (lastIdAdded == null || lastIdAdded.isEmpty()) {
-			logBoth("*** shouldNextPageButtonBeActive: lastIdAdded is null or empty, disabling Next button ***");
 			return false;
 		}
 		
@@ -2327,50 +2247,35 @@ public class BrowserDialog implements IDragDropInstigator {
 			// If we have a partial page, we've reached the end of filtered messages
 			// Even if hasMore is true (there might be unfiltered messages), we should disable Next
 			if (partialPage) {
-				logBoth("*** shouldNextPageButtonBeActive: Filter active, partial page detected (" + 
-					numberOfMessagesOnTheCurrentPage + " < " + nItemsPerPage + "), disabling Next button ***");
 				return false;
 			}
 			
 			// If no partial page but hasMore is false, also disable
 			if (!hasMore) {
-				logBoth("*** shouldNextPageButtonBeActive: Filter active, hasMore=false, disabling Next button ***");
 				return false;
 			}
 			
 			// Page is full and hasMore is true, enable Next
-			logBoth("*** shouldNextPageButtonBeActive: Filter active, full page (" + 
-				numberOfMessagesOnTheCurrentPage + " = " + nItemsPerPage + ") and hasMore=true, enabling Next button ***");
 			return true;
 		} else {
 			// No filter: use standard check
 			boolean hasMore = browser.hasMoreAfterId(lastIdAdded);
-			logBoth("*** shouldNextPageButtonBeActive: No filter, hasMore=" + hasMore + " ***");
 			return hasMore;
 		}
 	}
 	
 	int rowCount = 0;
 	private void onNextPage(JDialog dialog, DefaultTableModel tableModel, JButton backButton) {
-		logBothWithThread("*** FUNCTION CALL: onNextPage() - START ***");
-		logBoth("*** onNextPage: Current nCurPage = " + nCurPage + 
-			", tableModel rowCount = " + tableModel.getRowCount() + 
-			", dialog = " + (dialog != null ? "not null" : "null") + 
-			", backButton = " + (backButton != null ? "not null" : "null") + " ***");
 		dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		nCurPage++;
-		logBoth("*** onNextPage: Incremented nCurPage to " + nCurPage + " ***");
 		Object[][] dataUpdate = null;
 		
 		try {
-			logBoth("*** onNextPage: Calling getMessages() ***");
 			dataUpdate = this.getMessages();
 			rowCount = dataUpdate.length;
-			logBoth("*** onNextPage: getMessages() returned " + rowCount + " messages ***");
 		} catch (BrokerException e) {
 			// Show error dialog if SMF connection fails
-			logBoth("*** onNextPage: getMessages() failed with BrokerException: " + e.getMessage() + " ***");
-			logger.error("*** onNextPage: getMessages() failed with BrokerException: " + e.getMessage() + " ***", e);
+			logger.error("Failed to get messages", e);
 			String errorMsg = buildDetailedErrorMessage("SMF (Messaging) connection failed", e);
 			// Show error dialog immediately
 			JOptionPane.showMessageDialog(dialog, 
@@ -2382,8 +2287,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			rowCount = 0;
 		} catch (Exception e) {
 			// Catch any other exceptions
-			logBoth("*** onNextPage: getMessages() failed with Exception: " + e.getMessage() + " ***");
-			logger.error("*** onNextPage: getMessages() failed with Exception: " + e.getMessage() + " ***", e);
+			logger.error("Failed to get messages", e);
 			String errorMsg = buildDetailedErrorMessage("Unexpected error loading messages", e);
 			JOptionPane.showMessageDialog(dialog, 
 				errorMsg,
@@ -2392,68 +2296,39 @@ public class BrowserDialog implements IDragDropInstigator {
 			dataUpdate = new Object[0][];
 			rowCount = 0;
 		}
-		logBoth("*** onNextPage: Calling display() with " + (dataUpdate != null ? dataUpdate.length : 0) + " rows ***");
 		display(tableModel, dataUpdate);
-		logBoth("*** onNextPage: display() completed, tableModel rowCount = " + tableModel.getRowCount() + " ***");
 		
 		if (backButton != null) {
-			boolean wasEnabled = backButton.isEnabled();
 			backButton.setEnabled(true);
-			logBoth("*** onNextPage: backButton enabled set to true (was " + wasEnabled + ") ***");
-		} else {
-			logBoth("*** onNextPage: WARNING - backButton is null! ***");
 		}
 		
 		// see if the browser has any more messages after the last one onscreen
 		// This now handles filtered messages correctly
 		boolean hasMore = shouldNextPageButtonBeActive();
 		if (nextPageButton != null) {
-			boolean wasEnabled = nextPageButton.isEnabled();
 			nextPageButton.setEnabled(hasMore);
-			logBoth("*** onNextPage: nextPageButton enabled set to " + hasMore + " (was " + wasEnabled + 
-				", numberOfMessagesOnTheCurrentPage=" + numberOfMessagesOnTheCurrentPage + 
-				", nItemsPerPage=" + nItemsPerPage + ") ***");
-		} else {
-			logBoth("*** onNextPage: WARNING - nextPageButton is null! ***");
 		}
 		onPageChange();
 		dialog.setCursor(Cursor.getDefaultCursor());
-		logBoth("*** onNextPage: Cursor reset to default ***");
 		
 		// Recalculate page count after loading messages
 		recalculateEstimatedPageCount();
 
-		logBoth("*** onNextPage: Setting up invokeLater for autoSelectFirstRow and preFetch, rowCount = " + rowCount + " ***");
 		SwingUtilities.invokeLater(() -> {
-			logBothWithThread("*** onNextPage: invokeLater callback started ***");
 			if (rowCount > 0) {
-				logBoth("*** onNextPage: rowCount > 0, Calling autoSelectFirstRow() ***");
 				autoSelectFirstRow();
-				logBoth("*** onNextPage: autoSelectFirstRow() completed ***");
-			} else {
-				logBoth("*** onNextPage: rowCount = 0, skipping autoSelectFirstRow() ***");
 			}
-			logBoth("*** onNextPage: Calling preFetch() ***");
 			preFetch();
-			logBoth("*** onNextPage: preFetch() completed ***");
 		});
-		logBothWithThread("*** FUNCTION CALL: onNextPage() - END ***");
 	}
 
 	private Object[][] getMessages() throws BrokerException {
-		logBothWithThread("*** FUNCTION CALL: getMessages() - START ***");
-		logBoth("*** getMessages: nCurPage = " + nCurPage + ", calling browser.getPage(" + (nCurPage - 1) + 
-			"), browser = " + (browser != null ? "not null" : "null") + " ***");
 		// Create an ArrayList of ArrayList<String> to store the data
 		ArrayList<ArrayList<String>> dynamicArray = new ArrayList<>();
 		ArrayList<BytesXMLMessage> thisPage = null;
 		try {
 			thisPage = browser.getPage(nCurPage - 1); // its star6 counting at 0
-			logBoth("*** getMessages: browser.getPage(" + (nCurPage - 1) + ") returned " + 
-				(thisPage != null ? thisPage.size() : 0) + " messages ***");
 		} catch (Exception e) {
-			logBoth("*** getMessages: browser.getPage() threw exception: " + e.getClass().getSimpleName() + 
-				" - " + e.getMessage() + " ***");
 			throw e;
 		}
 
@@ -2497,9 +2372,7 @@ public class BrowserDialog implements IDragDropInstigator {
 			for (int y = 0; y < row.size(); y++) {
 			data[i][y+2] = row.get(y);	
 		}
-	}
-		logBoth("*** getMessages: Processed " + dynamicArray.size() + " messages, returning " + data.length + " rows ***");
-		logBothWithThread("*** FUNCTION CALL: getMessages() - END ***");
+		}
 		return data;
 }
 	
