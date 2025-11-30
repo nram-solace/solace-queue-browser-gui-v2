@@ -78,9 +78,43 @@ java -jar target/SolaceQueueBrowserGui-1.0.0-jar-with-dependencies.jar -c config
 
 ### Configuration File Structure
 
-The application uses a JSON configuration file to define broker connections and UI settings. The configuration supports multiple brokers in an array format.
+The application uses a two-file configuration system:
+1. **System Configuration** (`config/system.json`) - Contains system and internal properties
+2. **User Configuration** - Contains only broker connection information
 
-#### Basic Configuration Format
+The system configuration is loaded first, followed by the user configuration file. This separation reduces redundancy and makes it easier to maintain system settings.
+
+#### System Configuration File (`config/system.json`)
+
+The system configuration file contains system and internal properties:
+
+```json
+{
+  "version": "v2.2.0",
+  "downloadFolder": "./downloads",
+  "ui": {
+    "fontFamily": null,
+    "defaultFontSize": 14,
+    "headerFontSize": 16,
+    "statusFontSize": 22
+  }
+}
+```
+
+**System Configuration Fields:**
+
+- `version`: Application version string (displayed in window titles) - **top level**
+- `downloadFolder`: Default folder for downloaded messages (relative or absolute path)
+- `ui.fontFamily`: Font family name (null uses system default)
+- `ui.defaultFontSize`: Default font size for UI elements
+- `ui.headerFontSize`: Font size for headers
+- `ui.statusFontSize`: Font size for status messages
+
+**Note:** The system configuration file is optional. If it doesn't exist, default values are used. This ensures backward compatibility with existing configurations.
+
+#### User Configuration File Format
+
+User configuration files contain **only** broker connection information:
 
 ```json
 {
@@ -95,19 +129,9 @@ The application uses a JSON configuration file to define broker connections and 
       "messagingClientUsername": "default",
       "messagingPw": "password"
     }
-  ],
-  "downloadFolder": "./downloads",
-  "ui": {
-    "version": "2.1.2",
-    "fontFamily": null,
-    "defaultFontSize": 14,
-    "headerFontSize": 16,
-    "statusFontSize": 22
-  }
+  ]
 }
 ```
-
-#### Configuration Fields
 
 **Broker Configuration (`eventBrokers` array):**
 
@@ -120,14 +144,7 @@ The application uses a JSON configuration file to define broker connections and 
 - `messagingClientUsername`: Messaging client username
 - `messagingPw`: Messaging client password (supports encrypted format)
 
-**Application Configuration:**
-
-- `downloadFolder`: Default folder for downloaded messages (relative or absolute path)
-- `ui.version`: Application version string (displayed in window titles)
-- `ui.fontFamily`: Font family name (null uses system default)
-- `ui.defaultFontSize`: Default font size for UI elements
-- `ui.headerFontSize`: Font size for headers
-- `ui.statusFontSize`: Font size for status messages
+**Note:** User configuration files can still include system properties (like `downloadFolder` or `ui`) for backward compatibility, but this is not recommended. System properties should be maintained in `config/system.json`.
 
 #### Backward Compatibility
 
@@ -801,7 +818,24 @@ To verify an encrypted password:
 
 ### Configuration File Schema
 
-#### Complete Schema
+#### System Configuration Schema (`config/system.json`)
+
+```json
+{
+  "version": "string (optional, default: v2.1.3)",
+  "downloadFolder": "string (optional, default: ./downloads)",
+  "ui": {
+    "fontFamily": "string | null (optional, null uses system default)",
+    "defaultFontSize": "integer (optional, default: 14)",
+    "headerFontSize": "integer (optional, default: 16)",
+    "statusFontSize": "integer (optional, default: 22)"
+  }
+}
+```
+
+**Note:** The system configuration file is optional. If it doesn't exist, default values are used.
+
+#### User Configuration Schema
 
 ```json
 {
@@ -816,17 +850,11 @@ To verify an encrypted password:
       "messagingClientUsername": "string (required)",
       "messagingPw": "string (required, plain text or ENC:...)"
     }
-  ],
-  "downloadFolder": "string (optional, default: ./downloads)",
-  "ui": {
-    "version": "string (optional)",
-    "fontFamily": "string | null (optional)",
-    "defaultFontSize": "integer (optional, default: 14)",
-    "headerFontSize": "integer (optional, default: 16)",
-    "statusFontSize": "integer (optional, default: 22)"
-  }
+  ]
 }
 ```
+
+**Note:** User configuration files should contain only broker information. System properties (`downloadFolder`, `ui`, `version`) can still be included for backward compatibility, but are not recommended. System properties should be maintained in `config/system.json`.
 
 ### Supported URL Formats
 

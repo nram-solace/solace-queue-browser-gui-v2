@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.solace.psg.brokers.Broker;
@@ -79,9 +80,14 @@ public class Config {
 		try {
 			fileContent = FileUtils.loadFile(this.configFile);
 		} catch (IOException e) {
-			throw new BrokerException(e);
+			throw new BrokerException("Failed to read user configuration file: " + e.getMessage());
 		}
-		JSONObject doc = new JSONObject(fileContent);
+		JSONObject doc = null;
+		try {
+			doc = new JSONObject(fileContent);
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to parse user configuration file: " + e.getMessage());
+		}
 		
 		// Check eventBrokers array
 		if (doc.has("eventBrokers")) {
@@ -92,14 +98,8 @@ public class Config {
 					return true;
 				}
 			}
-		}
-		
-		// Check single eventBroker (backward compatibility)
-		if (doc.has("eventBroker")) {
-			JSONObject eventBroker = doc.getJSONObject("eventBroker");
-			if (hasEncryptedPasswordInBroker(eventBroker)) {
-				return true;
-			}
+		} else {
+			throw new BrokerException("User configuration must contain 'eventBrokers' array");
 		}
 		
 		return false;
@@ -125,7 +125,7 @@ public class Config {
 	}
 	
 	public void load() throws BrokerException  {
-		// First, load system.json if it exists
+		// First, load system.json (mandatory)
 		loadSystemConfig();
 		
 		// Then load user config file
@@ -133,76 +133,92 @@ public class Config {
 		try {
 			fileContent = FileUtils.loadFile(this.configFile);
 		} catch (IOException e) {
-			throw new BrokerException(e);
+			throw new BrokerException("Failed to read user configuration file: " + e.getMessage());
 		}
-		JSONObject doc = new JSONObject(fileContent);
+		JSONObject doc = null;
+		try {
+			doc = new JSONObject(fileContent);
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to parse user configuration file: " + e.getMessage());
+		}
 		
 		// Load system properties from user config (allows override, though not recommended)
-		if (doc.has("version")) {
-			version = doc.getString("version");
-		}
-		if (doc.has("downloadFolder")) {
-			downloadFolder = doc.getString("downloadFolder");
-		}
-		
-		// Load UI configuration if present (allows override, though not recommended)
-		if (doc.has("ui")) {
-			JSONObject uiConfig = doc.getJSONObject("ui");
-			if (uiConfig.has("fontFamily") && !uiConfig.isNull("fontFamily")) {
-				fontFamily = uiConfig.getString("fontFamily");
+		try {
+			if (doc.has("version")) {
+				version = doc.getString("version");
 			}
-			if (uiConfig.has("defaultFontSize")) {
-				defaultFontSize = uiConfig.getInt("defaultFontSize");
+			if (doc.has("downloadFolder")) {
+				downloadFolder = doc.getString("downloadFolder");
 			}
-			if (uiConfig.has("headerFontSize")) {
-				headerFontSize = uiConfig.getInt("headerFontSize");
+			
+			// Load UI configuration if present (allows override, though not recommended)
+			if (doc.has("ui")) {
+				JSONObject uiConfig = doc.getJSONObject("ui");
+				if (uiConfig.has("fontFamily") && !uiConfig.isNull("fontFamily")) {
+					fontFamily = uiConfig.getString("fontFamily");
+				}
+				if (uiConfig.has("defaultFontSize")) {
+					defaultFontSize = uiConfig.getInt("defaultFontSize");
+				}
+				if (uiConfig.has("headerFontSize")) {
+					headerFontSize = uiConfig.getInt("headerFontSize");
+				}
+				if (uiConfig.has("statusFontSize")) {
+					statusFontSize = uiConfig.getInt("statusFontSize");
+				}
+				// Backward compatibility: also check for version in ui object
+				if (uiConfig.has("version")) {
+					version = uiConfig.getString("version");
+				}
 			}
-			if (uiConfig.has("statusFontSize")) {
-				statusFontSize = uiConfig.getInt("statusFontSize");
-			}
-			// Backward compatibility: also check for version in ui object
-			if (uiConfig.has("version")) {
-				version = uiConfig.getString("version");
-			}
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to process user configuration: " + e.getMessage());
 		}
 
-		// Load event brokers - support both array and single object for backward compatibility
-		if (doc.has("eventBrokers")) {
-			// New format: array of brokers
-			JSONArray eventBrokersArray = doc.getJSONArray("eventBrokers");
-			if (eventBrokersArray.length() == 0) {
-				throw new BrokerException("Configuration must contain at least one event broker");
+		// Load event brokers - must be array format
+		try {
+			if (doc.has("eventBrokers")) {
+				JSONArray eventBrokersArray = doc.getJSONArray("eventBrokers");
+				if (eventBrokersArray.length() == 0) {
+					throw new BrokerException("Configuration must contain at least one event broker in 'eventBrokers' array");
+				}
+				for (int i = 0; i < eventBrokersArray.length(); i++) {
+					JSONObject eventBroker = eventBrokersArray.getJSONObject(i);
+					Broker b = createBrokerFromJson(eventBroker);
+					brokers.add(b);
+				}
+				// Set first broker as default selected broker
+				broker = brokers.get(0);
+				selectedBrokerIndex = 0;
+			} else {
+				throw new BrokerException("User configuration must contain 'eventBrokers' array");
 			}
-			for (int i = 0; i < eventBrokersArray.length(); i++) {
-				JSONObject eventBroker = eventBrokersArray.getJSONObject(i);
-				Broker b = createBrokerFromJson(eventBroker);
-				brokers.add(b);
-			}
-			// Set first broker as default selected broker
-			broker = brokers.get(0);
-			selectedBrokerIndex = 0;
-		} else if (doc.has("eventBroker")) {
-			// Old format: single broker object (backward compatibility)
-			JSONObject eventBroker = doc.getJSONObject("eventBroker");
-			Broker b = createBrokerFromJson(eventBroker);
-			brokers.add(b);
-			broker = b;
-			selectedBrokerIndex = 0;
-		} else {
-			throw new BrokerException("Configuration must contain either 'eventBroker' or 'eventBrokers'");
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to process eventBrokers configuration: " + e.getMessage());
 		}
 	}
 	
 	/**
 	 * Load system configuration from config/system.json
 	 * This file contains system/internal properties like download folder and UI settings
+	 * This file is mandatory and the application will exit with an error if it doesn't exist or fails to load.
 	 */
 	private void loadSystemConfig() throws BrokerException {
 		String systemConfigFile = "config/system.json";
+		String fileContent = null;
 		try {
-			String fileContent = FileUtils.loadFile(systemConfigFile);
-			JSONObject systemDoc = new JSONObject(fileContent);
-			
+			fileContent = FileUtils.loadFile(systemConfigFile);
+		} catch (IOException e) {
+			throw new BrokerException("Failed to read system configuration file '" + systemConfigFile + "': " + e.getMessage() + ". The system.json file is required.");
+		}
+		JSONObject systemDoc = null;
+		try {
+			systemDoc = new JSONObject(fileContent);
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to parse system configuration file '" + systemConfigFile + "': " + e.getMessage() + ". The system.json file must be valid JSON.");
+		}
+		
+		try {
 			// Load version from top level
 			if (systemDoc.has("version")) {
 				version = systemDoc.getString("version");
@@ -229,9 +245,8 @@ public class Config {
 					statusFontSize = uiConfig.getInt("statusFontSize");
 				}
 			}
-		} catch (IOException e) {
-			// System config file is optional - if it doesn't exist, use defaults
-			// This allows backward compatibility with existing configs
+		} catch (JSONException e) {
+			throw new BrokerException("Failed to process system configuration file '" + systemConfigFile + "': " + e.getMessage());
 		}
         
         /* This code removed for V1 release
