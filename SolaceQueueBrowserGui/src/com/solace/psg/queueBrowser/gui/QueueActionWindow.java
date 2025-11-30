@@ -22,27 +22,15 @@ public class QueueActionWindow extends JPanel {
 
 	public enum eAction {eCopy, eMove, eDelete};
 	private eAction eActionSelected;
-	private int topY = 10;
-	private int flyingX = 150; // Starting X position of the flying object
-	private int flyingY = topY + 30; // Y position of the flying object
-	private int shovelX = 70; // Starting X position for the shovel
-	private int shovelY = topY + 10; // Y position for the shovel
-	private int shovelDX = 1; // Shovel's horizontal movement speed
-	private final ImageIcon flyingIcon;
-	private ImageIcon shovelIcon;
-	private ImageIcon srcQIcon;
-	private ImageIcon tarQIcon;
 	private String srcQName;
-	private Timer shovelTimer;
-	private Timer progressTimer;
 	private SwingWorker<Void, Integer> worker;
+	private boolean cancelled = false;
 	private SempClient sempV2ActionClient;
 	private SempClient sempV2MonitorClient;
 	private int totalMsgCount;
 	private int msgsProcessed;
 	private String msgVpnName;
 	private JFrame parentFrame;
-	private JLabel progressLabel;
 	private QueueBrowser solaceBrowserObject;
 	private Broker broker;
 	private String windowTitle;
@@ -63,15 +51,15 @@ public class QueueActionWindow extends JPanel {
 		this.eActionSelected = action;
 		
 		if (action == eAction.eCopy) {
-			windowTitle = "Copy All Messages";
+			windowTitle = "Copy All in progress";
 			srcQlabelTitle = "Copying all messages from:";
 		}
 		else if (action == eAction.eMove) {
-			windowTitle = "Move All Messages";
+			windowTitle = "Move All in progress";
 			srcQlabelTitle = "Moving all messages from:";
 		}
 		else if (action == eAction.eDelete) {
-			windowTitle = "Delete All Messages";
+			windowTitle = "Delete All in progress";
 			srcQlabelTitle = "Deleting all messages from:";
 		}
 		
@@ -80,32 +68,6 @@ public class QueueActionWindow extends JPanel {
 				throw new BrokerException("Must suppy a destQueue name to copy or move messages");
 			}
 		}
-		
-		flyingIcon = new ImageIcon("config/messageIcon32.png");
-		shovelIcon = new ImageIcon("config/shovelSm.png");
-
-		srcQIcon = new ImageIcon("config/queue.png");
-		
-		if (action == eAction.eDelete) {
-			tarQIcon = new ImageIcon("config/trash.png");
-		}
-		else {
-			tarQIcon = new ImageIcon("config/queue.png");
-		}
-
-		shovelTimer = new Timer(30, e -> {
-			shovelX += shovelDX;
-			if (shovelX < 70 || shovelX > 100) {
-				shovelDX = -shovelDX;
-			}
-
-			flyingX += 3; // Constant speed
-			if (flyingX > 500) {
-				flyingX = 130; // Reset to start left of the screen
-			}
-			repaint(); // Update the screen
-		});
-		shovelTimer.start();
 	}
 	
 	/**
@@ -122,14 +84,7 @@ public class QueueActionWindow extends JPanel {
 		return UIManager.getFont("Label.font").deriveFont(style, size);
 	}
 
-	@Override
-	protected void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		srcQIcon.paintIcon(this, g, 10, topY + 10);
-		tarQIcon.paintIcon(this, g, 500, topY + 10);
-		shovelIcon.paintIcon(this, g, shovelX, shovelY);
-		flyingIcon.paintIcon(this, g, flyingX, flyingY);
-	}
+	// Removed paintComponent - no graphics needed
 
 	public void run() {
 		try {
@@ -139,11 +94,11 @@ public class QueueActionWindow extends JPanel {
 			e1.printStackTrace();
 		}
 		msgsProcessed = 0;
-		solaceBrowserObject = new QueueBrowser(broker, this.srcQName, 50);
+		cancelled = false;
 
 		JDialog frame = new JDialog (parentFrame, windowTitle, true);
 		frame.setLocationRelativeTo(parentFrame);
-		frame.setLocation(parentFrame.getLocation().x + 10, parentFrame.getLocation().y + 10);
+		// Center the dialog on screen
 		frame.setIconImage(parentFrame.getIconImage());
 
 		Container contentPane = frame.getContentPane();
@@ -151,86 +106,67 @@ public class QueueActionWindow extends JPanel {
 
 		JPanel verticalPanel = new JPanel();
 		verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
-		verticalPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4)); // Add some margin
+		verticalPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Add padding
 
-		JLabel labelTop = new JLabel(srcQlabelTitle);
-		int headerFontSize = config != null ? config.headerFontSize : 16;
-		labelTop.setFont(getFont(headerFontSize, Font.PLAIN));
-		verticalPanel.add(labelTop);
-
-		JLabel labelLine2 = new JLabel("Source queue: '" + srcQName + "'.");
-		labelLine2.setBorder(new EmptyBorder(5, 20, 0, 0)); // Top, Left, Bottom, Right
-		labelLine2.setFont(labelTop.getFont());
-		verticalPanel.add(labelLine2);
-
-		if ((eActionSelected == eAction.eCopy) || (eActionSelected == eAction.eMove)) {
-			JLabel labelLine3 = new JLabel("Target queue: '" + tarQName + "'.");
-			labelLine3.setBorder(new EmptyBorder(5, 20, 10, 0)); // Top, Left, Bottom, Right
-			labelLine3.setFont(labelTop.getFont());
-			verticalPanel.add(labelLine3);
+		// Create status message based on action type
+		String statusMessage = "";
+		if (eActionSelected == eAction.eCopy) {
+			statusMessage = "Copying " + totalMsgCount + " messages from Queue " + srcQName + " to " + tarQName;
+		} else if (eActionSelected == eAction.eMove) {
+			statusMessage = "Moving " + totalMsgCount + " messages from Queue " + srcQName + " to " + tarQName;
+		} else if (eActionSelected == eAction.eDelete) {
+			statusMessage = "Deleting all messages from Queue " + srcQName;
 		}
 
-		JProgressBar progressBar = new JProgressBar();
-		progressBar.setMinimum(0);
-		progressBar.setMaximum(100);
-		progressBar.setStringPainted(true);
-		progressBar.setBorder(new EmptyBorder(0, 10, 0, 10)); // Top, Left, Bottom, Right
+		JLabel labelTop = new JLabel(statusMessage);
+		int headerFontSize = config != null ? config.headerFontSize : 16;
+		labelTop.setFont(getFont(headerFontSize, Font.PLAIN));
+		labelTop.setBorder(new EmptyBorder(10, 10, 10, 10)); // Add padding
+		verticalPanel.add(labelTop);
 
-		JPanel parentPanel = new JPanel();
-		parentPanel.setLayout(new BorderLayout()); // Use BorderLayout to stack them
-		parentPanel.add(this, BorderLayout.CENTER); // Add the animation panel
-		parentPanel.add(verticalPanel, BorderLayout.SOUTH);
-
-		frame.add(parentPanel); // , BorderLayout.CENTER);
-		
-		progressLabel = new JLabel(this.getProgressLabelText());
-		progressLabel.setBorder(new EmptyBorder(4, 4, 4, 4)); // Top, Left, Bottom, Right
-		progressLabel.setFont(getFont(headerFontSize, Font.PLAIN));
-		JPanel labelPanel = new JPanel();
-		labelPanel.setLayout(new BorderLayout()); // Use BorderLayout to stack them
-		labelPanel.add(progressLabel, BorderLayout.WEST);
-
-		frame.add(labelPanel);// , BorderLayout.SOUTH);
-		frame.add(progressBar);// , BorderLayout.SOUTH);
+		frame.add(verticalPanel);
 
 		JButton cancelButton = new JButton("Cancel");
 		cancelButton.setEnabled(true);
 		cancelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				SwingUtilities.invokeLater(() -> {
+				cancelled = true;
+				if (worker != null) {
 					worker.cancel(true);
-					shovelTimer.stop();
-					progressTimer.stop();
-					frame.dispose();
-				});
+				}
+				frame.dispose();
 			}
 		});
+		
+		// Handle window close event (X button)
+		frame.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				cancelled = true;
+				if (worker != null) {
+					worker.cancel(true);
+				}
+			}
+		});
+		
 		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		buttonPanel.setBorder(new EmptyBorder(1, 4, 1, 4)); // Top, Left, Bottom, Right
 		buttonPanel.add(cancelButton);
 		frame.add(buttonPanel);
 
-		frame.setSize(600, 380);
-		frame.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		frame.setSize(600, 200);
 
-		progressTimer = new Timer(100, e -> {
-			// Simulate progress bar updates
-			int currentValue = progressBar.getValue();
-			if (currentValue < progressBar.getMaximum()) {
-				progressBar.setValue(currentValue + 1);
-			} else {
-				progressBar.setValue(0); // Reset progress bar once it completes
-			}
-		});
-		//progressTimer.start();
+		// Initialize browser object before showing dialog
+		solaceBrowserObject = new QueueBrowser(broker, this.srcQName, 50);
 
 		// Background task using SwingWorker
 		worker = new SwingWorker<Void, Integer>() {
             @Override
             protected Void doInBackground() throws Exception {
                 for (int i = 0; i <= totalMsgCount; i++) {
-                    if (isCancelled()) {
+                    if (isCancelled() || cancelled) {
                         break; // Exit task if canceled
                     }
                 	try {
@@ -238,11 +174,15 @@ public class QueueActionWindow extends JPanel {
 							BytesXMLMessage msg = solaceBrowserObject.next();
 			    			
 							boolean axeIt = false;
-							if (eActionSelected != eAction.eDelete) {
+							if (eActionSelected == eAction.eDelete) {
+								// Delete operation
+				    			String logMsg = "MessageId " + msg.getMessageId() + " was deleted from the '" + srcQName + "' queue.";
+				    			CommandLog.instance().log(logMsg);
+			    				axeIt = true;
+							} else {
 								// copy or move.. 
 								ReplicationGroupMessageId replicationId = msg.getReplicationGroupMessageId();
 				    			sempV2ActionClient.copy(msgVpnName, srcQName, tarQName, replicationId.toString());
-				    			
 				    			
 				    			String action = "moved";
 				    			if (eActionSelected == eAction.eCopy) {
@@ -255,11 +195,6 @@ public class QueueActionWindow extends JPanel {
 				    				axeIt = true;
 				    			}
 							}
-							else {
-				    			String logMsg = "MessageId " + msg.getMessageId() + " was deleted from the '" + srcQName + "' queue.";
-				    			CommandLog.instance().log(logMsg);
-			    				axeIt = true;
-							}
 							
 							if (axeIt) {
 								msg.ackMessage();
@@ -270,6 +205,7 @@ public class QueueActionWindow extends JPanel {
 						}
 						else {
 							// all done
+							break;
 						}
 					} catch (BrokerException e) {
 						// TODO Auto-generated catch block
@@ -281,27 +217,40 @@ public class QueueActionWindow extends JPanel {
 
             @Override
             protected void process(java.util.List<Integer> chunks) {
-                for (int chunk : chunks) {
-					double done = ((double) chunk / totalMsgCount);
-					double dpercent = done * 100.0;
-					int perc = (int) dpercent; 
-				    progressBar.setValue(perc); // Update progress bar
-					progressLabel.setText(getProgressLabelText());
-                }
+                // No progress bar updates needed
             }
 
             @Override
             protected void done() {
-                if (isCancelled()) {
+                if (isCancelled() || cancelled) {
                     System.out.println("Task was canceled.");
+                    frame.dispose();
                 } else {
                     frame.dispose();
+                    // Show completion status popup
+                    showCompletionStatus();
                 }
             }
         };
 
         worker.execute(); // Start the task
 		frame.setVisible(true);
+	}
+	
+	private void showCompletionStatus() {
+		String statusMessage = "";
+		if (eActionSelected == eAction.eCopy) {
+			statusMessage = msgsProcessed + " messages copied from Queue " + srcQName + " to " + tarQName;
+		} else if (eActionSelected == eAction.eMove) {
+			statusMessage = msgsProcessed + " messages moved from Queue " + srcQName + " to " + tarQName;
+		} else if (eActionSelected == eAction.eDelete) {
+			statusMessage = msgsProcessed + " messages deleted from Queue " + srcQName;
+		}
+		
+		JOptionPane.showMessageDialog(parentFrame, 
+			statusMessage,
+			"Operation Complete",
+			JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	private String getProgressLabelText() {

@@ -1316,6 +1316,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 	private void onCopyAll(String selectedQueue, JFrame frame) {
 		String destQueue = pickAQueue(frame);
+		// Check if user cancelled or didn't select a queue
+		if (destQueue == null || destQueue.isEmpty()) {
+			return; // User cancelled, safely exit
+		}
 		QueueActionWindow cp;
 		try {
 			cp = new QueueActionWindow(frame, broker, eAction.eCopy, sempV2ActionClient, sempV2MonitorClient,
@@ -1327,10 +1331,13 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 
 	private void onMoveAll(String selectedQueue, JFrame frame) {
+		String destQueue = pickAQueue(frame);
+		// Check if user cancelled or didn't select a queue
+		if (destQueue == null || destQueue.isEmpty()) {
+			return; // User cancelled, safely exit
+		}
 		QueueActionWindow cp;
 		try {
-			String destQueue = pickAQueue(frame);
-
 			cp = new QueueActionWindow(frame, broker, eAction.eMove, sempV2ActionClient, sempV2MonitorClient,
 					broker.msgVpnName, selectedQueue, destQueue, thisCfg);
 			cp.run();
@@ -1352,7 +1359,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 	private void onDeleteAll(String selectedQueue, JFrame frame) {
 		int response = JOptionPane.showConfirmDialog(frame,
-				"Are you sure you want to delete all messages in the '" + selectedQueue + "' queue? IMPORTANT: This action cannot be undone.", "Confirmation",
+				"Are you sure you want to delete all message from the queue " + selectedQueue + " permanently?", "Confirmation",
 				JOptionPane.YES_NO_OPTION);
 
 		if (response == JOptionPane.YES_OPTION) {
