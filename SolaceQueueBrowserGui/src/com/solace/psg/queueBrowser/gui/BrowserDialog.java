@@ -434,6 +434,7 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		// Set a custom cell renderer to alternate row colors
 		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
+		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer());
 		table.getColumnModel().getColumn(1).setCellRenderer(iconCellRenderer);
 		
 		// Create select-all checkbox for header

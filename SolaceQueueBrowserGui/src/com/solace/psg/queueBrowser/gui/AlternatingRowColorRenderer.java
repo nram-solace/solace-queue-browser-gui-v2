@@ -24,8 +24,8 @@ public class AlternatingRowColorRenderer extends DefaultTableCellRenderer {
 			}
 			c.setForeground(Color.BLACK); // Normal text color
 		} else {
-			c.setBackground(new Color(255, 250, 150)); // Darker yellow highlight for better visibility
-			c.setForeground(Color.BLACK); // Black text on yellow background for readability
+			c.setBackground(new Color(144, 238, 144)); // Green highlight for better visibility
+			c.setForeground(Color.BLACK); // Black text on green background for readability
 		}
 		return c;
 	}

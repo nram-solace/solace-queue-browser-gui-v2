@@ -28,8 +28,8 @@ public class IconicTableCellRenderer extends DefaultTableCellRenderer {
             }
             label.setForeground(Color.BLACK); // Normal text color
         } else {
-            label.setBackground(new Color(255, 250, 150)); // Darker yellow highlight for better visibility
-            label.setForeground(Color.BLACK); // Black text on yellow background for readability
+            label.setBackground(new Color(144, 238, 144)); // Green highlight for better visibility
+            label.setForeground(Color.BLACK); // Black text on green background for readability
         }
 
         return label;

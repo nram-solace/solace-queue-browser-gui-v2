@@ -204,6 +204,8 @@ public class RestoreDialog {
 		table = new JTable(tableModel);
 		table.setRowHeight(33);
 		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
+		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer());
+		table.getColumnModel().getColumn(1).setCellRenderer(new IconicTableCellRenderer());
 		
 		// Set up select-all checkbox
 		setupSelectAllCheckbox();
