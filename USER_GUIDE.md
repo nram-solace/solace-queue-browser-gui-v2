@@ -235,6 +235,7 @@ Located at the bottom of the window:
 - **Copy ALL**: Copy all messages from selected queue to target queue
 - **Move ALL**: Move all messages from selected queue to target queue
 - **Delete ALL**: Delete all messages from selected queue
+- **Restore**: Restore messages from downloaded ZIP files to selected queue
 - **Refresh**: Refresh queue list and details
 - **Exit**: Close application
 
@@ -471,6 +472,59 @@ The Next button is automatically disabled when:
 - Selected messages are automatically unselected after download
 - Directory structure created automatically if it doesn't exist
 - Download path shown in confirmation dialog
+
+### Restore Messages
+
+**Purpose**: Restore previously downloaded messages from ZIP files back to a Solace queue.
+
+**Steps**:
+1. Select a queue in the main window (this will be the target queue for restoration)
+2. Click "Restore" button
+3. Restore dialog opens
+4. Click "Select Directory" button
+5. Navigate to directory containing downloaded message ZIP files (typically `./downloads/{hostname}/{vpn-name}/{queue-name}/`)
+6. Select directory and click "Open"
+7. Messages from the directory are displayed in a paginated table
+8. Select messages to restore using checkboxes (or use select-all checkbox in header)
+9. Click "Restore" button
+10. If source and target differ (different broker/VPN/queue), confirm the mismatch in dialog
+11. Messages are restored to the target queue
+12. Confirmation dialog shows number of messages restored
+
+**Screenshot Placeholder: Restore dialog**
+
+**File Format**:
+- Restore dialog reads from configured `downloadFolder` (default: `./downloads`)
+- Expected directory structure: `{downloadFolder}/{hostname}/{vpn-name}/{queue-name}/`
+- ZIP file naming: `msg-{MessageID}-{YYYYMMDDHHSS}.zip`
+- Each ZIP file contains: `payload.txt`, `headers.txt`, `userProps.txt`
+
+**Message Selection**:
+- Messages displayed in paginated table (20 per page by default)
+- Select individual messages using checkboxes
+- Select all messages using checkbox in table header
+- Selection persists across pages
+- Messages identified by composite key (messageId + timestamp) to handle duplicates
+
+**Source/Target Validation**:
+- System extracts source broker/VPN/queue from directory path
+- Compares with target queue (selected in main window)
+- Prompts user if source and target differ (different broker, VPN, or queue)
+- User can proceed or cancel the restore operation
+
+**Behavior**:
+- Messages are published to target queue using JCSMP API
+- Message headers and user properties are preserved
+- Original message format is maintained
+- Selected messages are automatically unselected after successful restore
+- Progress shown during restore operation
+- Confirmation dialog shows success/failure counts
+
+**Restrictions**:
+- Restore button only enabled when a queue is selected in main window
+- Directory must contain valid message ZIP files
+- ZIP files must follow expected format and structure
+- Target queue must exist and be accessible
 
 ### Drag and Drop
 
@@ -886,6 +940,9 @@ Log levels and formatting configured in `config/log4j2.properties`.
 - **"Master password is required"**: Encrypted passwords detected but no master password provided
 - **"Queue not found"**: Selected queue does not exist on broker
 - **"No messages selected"**: Operation requires message selection
+- **"Source and target differ"**: Restore source and target queue/VPN/host are different (user confirmation required)
+- **"No message ZIP files found"**: Selected directory doesn't contain valid message ZIP files
+- **"Could not extract source metadata"**: Directory path doesn't match expected format
 
 ### Limitations
 
@@ -910,6 +967,8 @@ Log levels and formatting configured in `config/log4j2.properties`.
    - Verify target queue before bulk operations
    - Use filters to limit scope of operations
    - Download messages before deletion for backup
+   - Restore messages to same or different queues as needed
+   - Verify source/target queue differences before restoring
 
 4. **Performance**:
    - Use appropriate page sizes (20-50 messages typically optimal)
@@ -928,7 +987,8 @@ Log levels and formatting configured in `config/log4j2.properties`.
 
 ### Version History
 
-- **v2.1.2**: Current version with multi-broker support, filtering, and password encryption
+- **v2.1.3**: Added message restore functionality and improved operation logging
+- **v2.1.2**: Multi-broker support, filtering, and password encryption
 - **v2.0.2**: SMF error handling improvements
 - **v2.0.0**: Major UI improvements and cross-platform compatibility
 
