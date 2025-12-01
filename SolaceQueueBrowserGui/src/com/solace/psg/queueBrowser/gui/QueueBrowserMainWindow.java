@@ -161,7 +161,9 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		handleMasterPassword();
 		
 		thisCfg.load();
-		broker = thisCfg.broker;
+		// Don't set broker from config initially - wait for user to select from dropdown
+		// broker = thisCfg.broker; // Removed - broker will be set when user selects from dropdown
+		broker = null; // Start with null broker - will be populated when user selects from dropdown
 		
 		// Initialize empty queue lists - connection will happen when broker is selected
 		allQueues = new ArrayList<QueueInfo>();
@@ -974,82 +976,92 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			System.out.println("thisCfg.brokers.size(): " + thisCfg.brokers.size());
 			System.out.println("thisCfg.getSelectedBrokerIndex(): " + thisCfg.getSelectedBrokerIndex());
 			
+			// Don't populate broker from config - wait for user to select from dropdown
+			// Broker will remain null until user selects from dropdown
 			if (broker == null) {
 				System.out.println("Broker is null during UI initialization - will connect when user selects from dropdown");
 				logger.info("Broker is null during UI initialization - connection will happen when user selects from dropdown");
-				if (thisCfg.brokers.size() > 0) {
-					// Use the selected broker from config, but don't connect yet
-					broker = thisCfg.broker;
-					System.out.println("Using selected broker from config: " + (broker != null ? broker.name : "null"));
-				} else {
-					System.out.println("ERROR: No brokers available!");
-					logger.error("No brokers available!");
-					broker = new Broker(); // Create empty broker to prevent NPE
-				}
+				// Keep broker as null - don't populate from config
+				// broker will be set when user selects from dropdown via switchBroker()
 			}
 			
-			// Create label with broker info - use helper method logic
+			// Create label with broker info - check if broker has been selected
 			try {
-				System.out.println("Broker details:");
-				System.out.println("  - broker.name: " + broker.name);
-				System.out.println("  - broker.sempHost: " + broker.sempHost);
-				System.out.println("  - broker.msgVpnName: " + broker.msgVpnName);
-				System.out.println("  - broker.sempAdminUser: " + broker.sempAdminUser);
-				System.out.println("  - broker.messagingClientUsername: " + broker.messagingClientUsername);
-				
-				logger.info("Creating initial broker info label - broker.name=" + broker.name + 
-					", sempHost=" + broker.sempHost + 
-					", msgVpnName=" + broker.msgVpnName + 
-					", sempAdminUser=" + broker.sempAdminUser + 
-					", messagingClientUsername=" + broker.messagingClientUsername);
-				
-				String brokerFqdn = broker.fqdn();
-				System.out.println("  - broker.fqdn(): " + brokerFqdn);
-				if (brokerFqdn == null || brokerFqdn.isEmpty()) {
-					System.out.println("WARNING: Broker FQDN is empty, using sempHost: " + broker.sempHost);
-					logger.warn("Broker FQDN is empty, using sempHost: " + broker.sempHost);
-					brokerFqdn = broker.sempHost != null ? broker.sempHost : "";
+				// Check if broker has been selected (has meaningful values)
+				if (!isBrokerSelected(broker)) {
+					System.out.println("No broker selected - showing 'Select host from the drop down' message");
+					logger.info("No broker selected - showing selection prompt");
+					
+					String selectHostMessage = "Select host from the drop down";
+					String htmlSelectHostMessage = formatSelectHostMessage();
+					greetingLine0 = new JLabel(htmlSelectHostMessage);
+					greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
+					greetingLine0.setVisible(true);
+					greetingLine0.setToolTipText(selectHostMessage);
+					
+					System.out.println("Label created with selection prompt. Text: " + greetingLine0.getText());
+					logger.info("Initial broker info display created with selection prompt");
+				} else {
+					System.out.println("Broker details:");
+					System.out.println("  - broker.name: " + broker.name);
+					System.out.println("  - broker.sempHost: " + broker.sempHost);
+					System.out.println("  - broker.msgVpnName: " + broker.msgVpnName);
+					System.out.println("  - broker.sempAdminUser: " + broker.sempAdminUser);
+					System.out.println("  - broker.messagingClientUsername: " + broker.messagingClientUsername);
+					
+					logger.info("Creating initial broker info label - broker.name=" + broker.name + 
+						", sempHost=" + broker.sempHost + 
+						", msgVpnName=" + broker.msgVpnName + 
+						", sempAdminUser=" + broker.sempAdminUser + 
+						", messagingClientUsername=" + broker.messagingClientUsername);
+					
+					String brokerFqdn = broker.fqdn();
+					System.out.println("  - broker.fqdn(): " + brokerFqdn);
+					if (brokerFqdn == null || brokerFqdn.isEmpty()) {
+						System.out.println("WARNING: Broker FQDN is empty, using sempHost: " + broker.sempHost);
+						logger.warn("Broker FQDN is empty, using sempHost: " + broker.sempHost);
+						brokerFqdn = broker.sempHost != null ? broker.sempHost : "";
+					}
+					
+					// Format broker info as two lines
+					String brokerInfo = "Broker: " + brokerFqdn + 
+						" | Service: " + (broker.msgVpnName != null ? broker.msgVpnName : "") + 
+						" | SEMP User: " + (broker.sempAdminUser != null ? broker.sempAdminUser : "") + 
+						" | Client User: " + (broker.messagingClientUsername != null ? broker.messagingClientUsername : "");
+					
+					System.out.println("Broker info text: " + brokerInfo);
+					System.out.println("Creating JLabel with two-line format");
+					
+					// Use HTML to enable text wrapping with two-line format
+					String htmlBrokerInfo = formatBrokerInfoWithWrapping(
+						brokerFqdn,
+						broker.msgVpnName != null ? broker.msgVpnName : "",
+						broker.sempAdminUser != null ? broker.sempAdminUser : "",
+						broker.messagingClientUsername != null ? broker.messagingClientUsername : ""
+					);
+					greetingLine0 = new JLabel(htmlBrokerInfo);
+					greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
+					greetingLine0.setVisible(true);
+					// Set tooltip to show full text on hover
+					greetingLine0.setToolTipText(brokerInfo);
+					
+					System.out.println("Label created. Text: " + greetingLine0.getText());
+					System.out.println("Label visible: " + greetingLine0.isVisible());
+					System.out.println("Label parent: " + greetingLine0.getParent());
+					
+					logger.info("Initial broker info display created: " + brokerInfo);
 				}
-				
-				// Format broker info as two lines
-				String brokerInfo = "Broker: " + brokerFqdn + 
-					" | Service: " + (broker.msgVpnName != null ? broker.msgVpnName : "") + 
-					" | SEMP User: " + (broker.sempAdminUser != null ? broker.sempAdminUser : "") + 
-					" | Client User: " + (broker.messagingClientUsername != null ? broker.messagingClientUsername : "");
-				
-				System.out.println("Broker info text: " + brokerInfo);
-				System.out.println("Creating JLabel with two-line format");
-				
-				// Use HTML to enable text wrapping with two-line format
-				String htmlBrokerInfo = formatBrokerInfoWithWrapping(
-					brokerFqdn,
-					broker.msgVpnName != null ? broker.msgVpnName : "",
-					broker.sempAdminUser != null ? broker.sempAdminUser : "",
-					broker.messagingClientUsername != null ? broker.messagingClientUsername : ""
-				);
-				greetingLine0 = new JLabel(htmlBrokerInfo);
-				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
-				greetingLine0.setVisible(true);
-				// Set tooltip to show full text on hover
-				greetingLine0.setToolTipText(brokerInfo);
-				
-				System.out.println("Label created. Text: " + greetingLine0.getText());
-				System.out.println("Label visible: " + greetingLine0.isVisible());
-				System.out.println("Label parent: " + greetingLine0.getParent());
-				
-				logger.info("Initial broker info display created: " + brokerInfo);
 			} catch (Exception e) {
 				System.out.println("EXCEPTION creating initial broker info label: " + e.getMessage());
 				e.printStackTrace();
 				logger.error("Failed to create initial broker info label: " + e.getMessage(), e);
-				// Create label with fallback info
-				String fallbackInfo = "Broker: " + (broker.name != null ? broker.name : "Unknown");
-				// Use HTML to enable text wrapping
-				String htmlFallbackInfo = formatBrokerInfoWithWrapping(fallbackInfo);
-				greetingLine0 = new JLabel(htmlFallbackInfo);
+				// Create label with selection prompt as fallback
+				String htmlSelectHostMessage = formatSelectHostMessage();
+				greetingLine0 = new JLabel(htmlSelectHostMessage);
 				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
 				greetingLine0.setVisible(true);
-				System.out.println("Created fallback label: " + fallbackInfo);
+				greetingLine0.setToolTipText("Select host from the drop down");
+				System.out.println("Created fallback label with selection prompt");
 			}
 			
 			System.out.println("Adding label to topPanel...");
@@ -1089,6 +1101,27 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 	}
+	/**
+	 * Helper method to check if a broker has been selected (has meaningful values)
+	 * @param broker The broker to check
+	 * @return true if broker is not null and has a non-empty sempHost
+	 */
+	private boolean isBrokerSelected(Broker broker) {
+		return broker != null && broker.sempHost != null && !broker.sempHost.trim().isEmpty();
+	}
+	
+	/**
+	 * Helper method to format the "Select host from the drop down" message
+	 * @return HTML formatted string with the selection prompt
+	 */
+	private String formatSelectHostMessage() {
+		String message = "Select host from the drop down";
+		String escaped = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		return "<html><div style='max-width: 600px; word-wrap: break-word; white-space: normal;'>" + 
+			escaped + 
+			"</div></html>";
+	}
+	
 	/**
 	 * Helper method to format broker info text with HTML wrapping
 	 * Formats broker info into two lines:
@@ -1147,9 +1180,28 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			logger.error("greetingLine0 is null in updateBrokerInfoLabel!");
 			return;
 		}
-		if (broker == null) {
-			System.out.println("ERROR: broker is null in updateBrokerInfoLabel!");
-			logger.error("broker is null in updateBrokerInfoLabel!");
+		
+		// Check if broker has been selected (has meaningful values)
+		if (!isBrokerSelected(broker)) {
+			System.out.println("No broker selected - showing 'Select host from the drop down' message");
+			logger.info("No broker selected - showing selection prompt");
+			
+			try {
+				String selectHostMessage = "Select host from the drop down";
+				String htmlSelectHostMessage = formatSelectHostMessage();
+				greetingLine0.setText(htmlSelectHostMessage);
+				greetingLine0.setVisible(true);
+				greetingLine0.setToolTipText(selectHostMessage);
+				greetingLine0.revalidate();
+				greetingLine0.repaint();
+				
+				System.out.println("Label updated with selection prompt");
+				logger.info("Successfully updated broker info label with selection prompt");
+			} catch (Exception e) {
+				System.out.println("EXCEPTION setting selection prompt: " + e.getMessage());
+				e.printStackTrace();
+				logger.error("Exception setting selection prompt: " + e.getMessage(), e);
+			}
 			return;
 		}
 		
@@ -1209,20 +1261,18 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			System.out.println("EXCEPTION in updateBrokerInfoLabel: " + e.getMessage());
 			e.printStackTrace();
 			logger.error("Exception in updateBrokerInfoLabel: " + e.getMessage(), e);
-			// Still try to show something
+			// Still try to show selection prompt as fallback
 			try {
-				String fallbackInfo = "Broker: " + (broker.name != null ? broker.name : "Unknown") + 
-					" | Service: " + (broker.msgVpnName != null ? broker.msgVpnName : "");
-				// Use HTML to enable text wrapping
-				String htmlFallbackInfo = formatBrokerInfoWithWrapping(fallbackInfo);
-				greetingLine0.setText(htmlFallbackInfo);
+				String htmlSelectHostMessage = formatSelectHostMessage();
+				greetingLine0.setText(htmlSelectHostMessage);
 				greetingLine0.setVisible(true);
-				System.out.println("Set fallback broker info: " + fallbackInfo);
-				logger.info("Set fallback broker info: " + fallbackInfo);
+				greetingLine0.setToolTipText("Select host from the drop down");
+				System.out.println("Set fallback selection prompt");
+				logger.info("Set fallback selection prompt");
 			} catch (Exception e2) {
 				System.out.println("EXCEPTION setting fallback: " + e2.getMessage());
 				e2.printStackTrace();
-				logger.error("Failed to set fallback broker info: " + e2.getMessage(), e2);
+				logger.error("Failed to set fallback selection prompt: " + e2.getMessage(), e2);
 			}
 		}
 	}
