@@ -159,7 +159,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		// Initialize connections for the selected broker
 		initializeBrokerConnections();
 		
-		this.iconCellRenderer = new IconicTableCellRenderer();
+		this.iconCellRenderer = new IconicTableCellRenderer(thisCfg);
 	}
 	
 	/**
@@ -310,7 +310,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private void run() {
 		// Create the frame
 		String versionStr = thisCfg != null ? thisCfg.version : "v2.1.3";
-		frame = new JFrame("SQMB+ : Solace Queue Message Browser & More - " + versionStr);
+		frame = new JFrame("SolaceQueueBrowserGui 2.0 - " + versionStr);
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			frame.setSize(1200, 800);
 			frame.setLayout(new BorderLayout());
@@ -347,7 +347,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			String tableFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
 			table.setFont(new Font(tableFontFamily, Font.PLAIN, 16));
 			table.getTableHeader().setFont(new Font(tableFontFamily, Font.PLAIN, 16));
-			table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
+			table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer(thisCfg));
 			table.getColumnModel().getColumn(0).setCellRenderer(iconCellRenderer);
 			table.getColumnModel().getColumn(0).setMaxWidth(48);
 			// Use ListSelectionListener for reliable single-click selection
@@ -459,7 +459,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			buttonPanel.setLayout(new BorderLayout());
 			browseButton = new JButton("Browse");
 			browseButton.setEnabled(false);
-			browseButton.setBackground(new Color(240, 230, 255)); // Soft purple background
+			browseButton.setBackground(thisCfg != null ? thisCfg.buttonFilter : new Color(240, 230, 255)); // Soft purple background
+			browseButton.setForeground(thisCfg != null ? thisCfg.buttonFilterForeground : Color.BLACK);
 			browseButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -511,7 +512,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			copyAllButton = new JButton("Copy ALL");
 			copyAllButton.setEnabled(false);
-			copyAllButton.setBackground(new Color(220, 235, 255)); // Soft blue background
+			copyAllButton.setBackground(thisCfg != null ? thisCfg.buttonCopy : new Color(220, 235, 255)); // Soft blue background
+			copyAllButton.setForeground(thisCfg != null ? thisCfg.buttonCopyForeground : Color.BLACK);
 			copyAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -521,7 +523,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			moveAllButton = new JButton("Move ALL");
 			moveAllButton.setEnabled(false);
-			moveAllButton.setBackground(new Color(255, 245, 220)); // Soft yellow background
+			moveAllButton.setBackground(thisCfg != null ? thisCfg.buttonMove : new Color(255, 245, 220)); // Soft yellow background
+			moveAllButton.setForeground(thisCfg != null ? thisCfg.buttonMoveForeground : Color.BLACK);
 			moveAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -531,7 +534,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			deleteAllButton = new JButton("Delete ALL");
 			deleteAllButton.setEnabled(false);
-			deleteAllButton.setBackground(new Color(255, 220, 220)); // Soft red background
+			deleteAllButton.setBackground(thisCfg != null ? thisCfg.buttonDelete : new Color(255, 220, 220)); // Soft red background
+			deleteAllButton.setForeground(thisCfg != null ? thisCfg.buttonDeleteForeground : Color.BLACK);
 			deleteAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -542,7 +546,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			restoreButton = new JButton("Restore");
 			restoreButton.setEnabled(false);
-			restoreButton.setBackground(new Color(220, 255, 220)); // Soft green background
+			restoreButton.setBackground(thisCfg != null ? thisCfg.buttonRestore : new Color(220, 255, 220)); // Soft green background
+			restoreButton.setForeground(thisCfg != null ? thisCfg.buttonRestoreForeground : Color.BLACK);
 			restoreButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -552,7 +557,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			refreshButton = new JButton("Refresh");
 			refreshButton.setEnabled(true);
-			refreshButton.setBackground(new Color(220, 245, 255)); // Soft cyan background
+			refreshButton.setBackground(thisCfg != null ? thisCfg.buttonRefresh : new Color(220, 245, 255)); // Soft cyan background
+			refreshButton.setForeground(thisCfg != null ? thisCfg.buttonRefreshForeground : Color.BLACK);
 			refreshButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -561,11 +567,12 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			});
 
 			// Create Exit button with soft red background
-			String headerFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : "Serif";
+			String headerFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : (thisCfg != null ? thisCfg.defaultFontFamilyFallback : "Serif");
+			int buttonFontSize = thisCfg != null ? thisCfg.buttonFontSize : 14;
 			exitButton = new JButton("Exit");
-			exitButton.setBackground(new Color(220, 150, 150)); // Very soft red
-			exitButton.setForeground(Color.WHITE);
-			exitButton.setFont(new Font(headerFontFamily, Font.BOLD, 14));
+			exitButton.setBackground(thisCfg != null ? thisCfg.buttonExit : new Color(220, 150, 150)); // Very soft red
+			exitButton.setForeground(thisCfg != null ? thisCfg.buttonExitForeground : Color.WHITE);
+			exitButton.setFont(new Font(headerFontFamily, Font.BOLD, buttonFontSize));
 			exitButton.setPreferredSize(new Dimension(80, 30));
 			exitButton.addActionListener(new ActionListener() {
 				@Override
@@ -591,9 +598,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			topPanel.add(iconLabel);
 			
 			// Create broker selection combo box if multiple brokers are available
+			int labelFontSize = thisCfg != null ? thisCfg.labelFontSize : 16;
 			if (thisCfg.getBrokers().size() > 1) {
 				JLabel brokerLabel = new JLabel("Event Broker:");
-				brokerLabel.setFont(new Font(headerFontFamily, Font.PLAIN, 16));
+				brokerLabel.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
 				topPanel.add(brokerLabel);
 				
 				// Create combo box with broker names
@@ -603,7 +611,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 				brokerComboBox = new JComboBox<String>(brokerNames);
 				brokerComboBox.setSelectedIndex(thisCfg.getSelectedBrokerIndex());
-				brokerComboBox.setFont(new Font(headerFontFamily, Font.PLAIN, 16));
+				brokerComboBox.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
 				brokerComboBox.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
@@ -767,7 +775,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 					broker.messagingClientUsername != null ? broker.messagingClientUsername : ""
 				);
 				greetingLine0 = new JLabel(htmlBrokerInfo);
-				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, 16));
+				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
 				greetingLine0.setVisible(true);
 				// Set tooltip to show full text on hover
 				greetingLine0.setToolTipText(brokerInfo);
@@ -786,7 +794,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				// Use HTML to enable text wrapping
 				String htmlFallbackInfo = formatBrokerInfoWithWrapping(fallbackInfo);
 				greetingLine0 = new JLabel(htmlFallbackInfo);
-				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, 16));
+				greetingLine0.setFont(new Font(headerFontFamily, Font.PLAIN, labelFontSize));
 				greetingLine0.setVisible(true);
 				System.out.println("Created fallback label: " + fallbackInfo);
 			}
@@ -1063,7 +1071,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			restoreButton.setEnabled(false);
 			
 			// Reset details label
-			String placeholderFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : Font.SANS_SERIF;
+			String placeholderFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : (thisCfg.defaultFontFamilyFallback != null ? thisCfg.defaultFontFamilyFallback : Font.SANS_SERIF);
 			detailsLabel.setText("<html>"
 					+ "<div style='width: 280px; text-align: left; vertical-align:top; font-family: " + placeholderFontFamily + ";'>"
 					+ "<p>Select a queue on the left to see details.</p>"
@@ -1445,9 +1453,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
             	 }
              }
              
+             int largeFontSize = thisCfg != null ? thisCfg.largeFontSize : 20;
              String style = " ";
              if (big) {
-            	 style = " style='font-size: 20px;' ";
+            	 style = " style='font-size: " + largeFontSize + "px;' ";
              }
              
              String fieldNameForDisply = splitCamelCase(fieldName);
@@ -1467,7 +1476,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		//String display = "Queue name: " + queueName + "\nCurrent Message Count: " + selectedQueueMsgCount;
 		StringBuilder sb = new StringBuilder();
 		// Use system default font family for better cross-platform appearance
-		String htmlFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : Font.SANS_SERIF;
+		String htmlFontFamily = (thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : (thisCfg.defaultFontFamilyFallback != null ? thisCfg.defaultFontFamilyFallback : Font.SANS_SERIF);
 		sb.append("<html>");
 		sb.append("<div style='width: 580px; text-align: left; vertical-align:top; font-family: " + htmlFontFamily + ";'>");
 
@@ -1675,7 +1684,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		
 		// Queue count label
 		queueCountLabel = new JLabel("");
-		queueCountLabel.setFont(new Font(queueCountLabel.getFont().getName(), Font.ITALIC, 11));
+		int smallFontSize = thisCfg != null ? thisCfg.smallFontSize : 11;
+		queueCountLabel.setFont(new Font(queueCountLabel.getFont().getName(), Font.ITALIC, smallFontSize));
 		panel.add(queueCountLabel);
 		
 		return panel;
@@ -1928,7 +1938,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			}
 			// Clear the queue details panel
 			if (detailsLabel != null) {
-				String placeholderFontFamily = (thisCfg != null && thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : Font.SANS_SERIF;
+				String placeholderFontFamily = (thisCfg != null && thisCfg.fontFamily != null && !thisCfg.fontFamily.isEmpty()) ? thisCfg.fontFamily : (thisCfg != null && thisCfg.defaultFontFamilyFallback != null ? thisCfg.defaultFontFamilyFallback : Font.SANS_SERIF);
 				detailsLabel.setText("<html>"
 					+ "<div style='width: 280px; text-align: left; vertical-align:top; font-family: " + placeholderFontFamily + ";'>"
 					+ "<p>Select a queue on the left to see details.</p>"

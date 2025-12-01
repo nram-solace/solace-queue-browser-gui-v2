@@ -131,7 +131,7 @@ public class RestoreDialog {
 	 */
 	public void run() {
 		String versionStr = config != null ? config.version : "v2.1.3";
-		dialog = new JDialog(parentFrame, "SQMB+ : Restore Messages - " + versionStr, true);
+		dialog = new JDialog(parentFrame, "SolaceQueueBrowserGui 2.0 - Restore Messages - " + versionStr, true);
 		dialog.setSize(1200, 800);
 		dialog.setLayout(new BorderLayout());
 		dialog.setModal(false);
@@ -139,7 +139,9 @@ public class RestoreDialog {
 		
 		// Create main panel
 		JPanel mainPanel = new JPanel(new BorderLayout());
-		String fontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : "Serif";
+		String fontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : (config != null ? config.defaultFontFamilyFallback : "Serif");
+		int labelFontSize = config != null ? config.labelFontSize : 16;
+		int buttonFontSize = config != null ? config.buttonFontSize : 14;
 		
 		// Top row: Queue info | Directory selection | Pagination (all in one row)
 		JPanel topRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
@@ -147,7 +149,7 @@ public class RestoreDialog {
 		
 		// Queue info
 		JLabel queueInfoLabel = new JLabel("Restore to Queue: " + defaultQueueName);
-		queueInfoLabel.setFont(new Font(fontFamily, Font.BOLD, 16));
+		queueInfoLabel.setFont(new Font(fontFamily, Font.BOLD, labelFontSize));
 		topRowPanel.add(queueInfoLabel);
 		
 		// Separator
@@ -155,12 +157,13 @@ public class RestoreDialog {
 		
 		// Directory selection
 		selectDirectoryButton = new JButton("Select Directory");
-		selectDirectoryButton.setBackground(new Color(220, 245, 255));
+		selectDirectoryButton.setBackground(config != null ? config.buttonRefresh : new Color(220, 245, 255));
+		selectDirectoryButton.setForeground(config != null ? config.buttonRefreshForeground : Color.BLACK);
 		selectDirectoryButton.addActionListener(e -> onSelectDirectory());
 		topRowPanel.add(selectDirectoryButton);
 		
 		sourceInfoLabel = new JLabel("No directory selected");
-		sourceInfoLabel.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		sourceInfoLabel.setFont(new Font(fontFamily, Font.PLAIN, buttonFontSize));
 		topRowPanel.add(sourceInfoLabel);
 		
 		// Separator
@@ -169,17 +172,19 @@ public class RestoreDialog {
 		// Pagination controls
 		previousPageButton = new JButton("<< Prev");
 		previousPageButton.setEnabled(false);
-		previousPageButton.setBackground(new Color(230, 240, 255));
+		previousPageButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255));
+		previousPageButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		previousPageButton.addActionListener(e -> onPreviousPage());
 		topRowPanel.add(previousPageButton);
 		
 		topLabel = new JLabel("Page 1 of 1");
-		topLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(topLabel);
 		
 		nextPageButton = new JButton("Next >>");
 		nextPageButton.setEnabled(false);
-		nextPageButton.setBackground(new Color(230, 240, 255));
+		nextPageButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255));
+		nextPageButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		nextPageButton.addActionListener(e -> onNextPage());
 		topRowPanel.add(nextPageButton);
 		
@@ -203,9 +208,9 @@ public class RestoreDialog {
 		
 		table = new JTable(tableModel);
 		table.setRowHeight(33);
-		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
-		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer());
-		table.getColumnModel().getColumn(1).setCellRenderer(new IconicTableCellRenderer());
+		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer(config));
+		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer(config));
+		table.getColumnModel().getColumn(1).setCellRenderer(new IconicTableCellRenderer(config));
 		
 		// Set up select-all checkbox
 		setupSelectAllCheckbox();
@@ -227,19 +232,21 @@ public class RestoreDialog {
 		
 		// Status label on the left
 		statusLabel = new JLabel("Select a directory containing message ZIP files");
-		statusLabel.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		statusLabel.setFont(new Font(fontFamily, Font.PLAIN, buttonFontSize));
 		bottomPanel.add(statusLabel, BorderLayout.WEST);
 		
 		// Buttons on the right
 		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
 		restoreButton = new JButton("Restore");
 		restoreButton.setEnabled(false);
-		restoreButton.setBackground(new Color(220, 255, 220));
+		restoreButton.setBackground(config != null ? config.buttonRestore : new Color(220, 255, 220));
+		restoreButton.setForeground(config != null ? config.buttonRestoreForeground : Color.BLACK);
 		restoreButton.addActionListener(e -> onRestore());
 		buttonPanel.add(restoreButton);
 		
 		cancelButton = new JButton("Cancel");
-		cancelButton.setBackground(new Color(255, 220, 220));
+		cancelButton.setBackground(config != null ? config.buttonDelete : new Color(255, 220, 220));
+		cancelButton.setForeground(config != null ? config.buttonDeleteForeground : Color.BLACK);
 		cancelButton.addActionListener(e -> dialog.dispose());
 		buttonPanel.add(cancelButton);
 		

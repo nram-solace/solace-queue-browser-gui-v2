@@ -10,6 +10,16 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 public class IconicTableCellRenderer extends DefaultTableCellRenderer {
 	private static final long serialVersionUID = 1L;
+	
+	private Config config;
+	
+	public IconicTableCellRenderer() {
+		this.config = null; // Will use defaults if null
+	}
+	
+	public IconicTableCellRenderer(Config config) {
+		this.config = config;
+	}
 
 	@Override
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -20,16 +30,22 @@ public class IconicTableCellRenderer extends DefaultTableCellRenderer {
         }
 
         // Apply alternating row colors and selection highlighting
+        Color evenBg = config != null ? config.rowEvenBackground : new Color(248, 248, 248);
+        Color oddBg = config != null ? config.rowOddBackground : Color.WHITE;
+        Color selectedBg = config != null ? config.rowSelectedBackground : new Color(144, 238, 144);
+        Color rowFg = config != null ? config.rowForeground : Color.BLACK;
+        Color selectedFg = config != null ? config.rowSelectedForeground : Color.BLACK;
+        
         if (!isSelected) {
             if (row % 2 == 0) {
-                label.setBackground(new Color(248, 248, 248)); // Very soft gray
+                label.setBackground(evenBg);
             } else {
-                label.setBackground(Color.WHITE);
+                label.setBackground(oddBg);
             }
-            label.setForeground(Color.BLACK); // Normal text color
+            label.setForeground(rowFg);
         } else {
-            label.setBackground(new Color(144, 238, 144)); // Green highlight for better visibility
-            label.setForeground(Color.BLACK); // Black text on green background for readability
+            label.setBackground(selectedBg);
+            label.setForeground(selectedFg);
         }
 
         return label;

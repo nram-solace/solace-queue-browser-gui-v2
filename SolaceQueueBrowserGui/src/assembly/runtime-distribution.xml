@@ -12,12 +12,12 @@
     <baseDirectory>SolaceQueueBrowserGui-${app.version}</baseDirectory>
     
     <fileSets>
-        <!-- Include the JAR file with dependencies -->
+        <!-- Include the JAR file with dependencies (renamed to use app.version) -->
         <fileSet>
             <directory>${project.build.directory}</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
-                <include>${project.build.finalName}-jar-with-dependencies.jar</include>
+                <include>SolaceQueueBrowserGui-${app.version}-jar-with-dependencies.jar</include>
             </includes>
         </fileSet>
         
@@ -54,7 +54,6 @@
             <outputDirectory>scripts</outputDirectory>
             <includes>
                 <include>run.sh</include>
-                <include>encrypt-password.sh</include>
                 <include>crypt-util.sh</include>
             </includes>
             <fileMode>0755</fileMode>
@@ -62,22 +61,23 @@
         
         <!-- Include documentation -->
         <fileSet>
-            <directory>${project.basedir}/..</directory>
+            <directory>${project.basedir}</directory>
             <outputDirectory>.</outputDirectory>
             <includes>
                 <include>README.md</include>
-                <include>USER_GUIDE.md</include>
             </includes>
             <filtered>false</filtered>
         </fileSet>
         
-        <!-- Include distribution-specific README -->
+        <!-- Include docs folder (USER_GUIDE.md and images) -->
         <fileSet>
-            <directory>${project.basedir}</directory>
-            <outputDirectory>.</outputDirectory>
+            <directory>${project.basedir}/docs</directory>
+            <outputDirectory>docs</outputDirectory>
             <includes>
-                <include>DISTRIBUTION_README.md</include>
+                <include>USER_GUIDE.md</include>
+                <include>img/**</include>
             </includes>
+            <filtered>false</filtered>
         </fileSet>
         
         <!-- Create empty directories for runtime -->

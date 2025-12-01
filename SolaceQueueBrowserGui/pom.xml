@@ -179,6 +179,37 @@
                      <goal>single</goal>
                   </goals>
                </execution>
+            </executions>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.4.0</version>
+            <configuration>
+               <archive>
+                  <manifest>
+                     <mainClass>com.solace.psg.queueBrowser.gui.QueueBrowserMainWindow</mainClass>
+                  </manifest>
+               </archive>
+               <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+               </descriptorRefs>
+            </configuration>
+            <executions>
+               <execution>
+                  <id>jar-with-dependencies</id>
+                  <phase>package</phase>
+                  <goals>
+                     <goal>single</goal>
+                  </goals>
+               </execution>
+            </executions>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.4.0</version>
+            <executions>
                <execution>
                   <id>runtime-distribution</id>
                   <phase>package</phase>
@@ -190,7 +221,6 @@
                         <descriptor>src/assembly/runtime-distribution.xml</descriptor>
                      </descriptors>
                      <appendAssemblyId>true</appendAssemblyId>
-                     <finalName>SolaceQueueBrowserGui-${app.version}</finalName>
                   </configuration>
                </execution>
             </executions>

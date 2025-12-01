@@ -13,8 +13,7 @@ This is a runtime-only distribution package of SolaceQueueBrowserGui. It contain
   - `config/solace-cloud.json` - Sample Solace Cloud configuration template
 - **Scripts**: 
   - `scripts/run.sh` - Main application launcher
-  - `scripts/encrypt-password.sh` - Password encryption utility
-  - `scripts/crypt-util.sh` - Cryptographic utilities
+  - `scripts/crypt-util.sh` - Password encryption/decryption utility
 - **Documentation**: 
   - `README.md` - Project overview
   - `USER_GUIDE.md` - Complete user guide and reference

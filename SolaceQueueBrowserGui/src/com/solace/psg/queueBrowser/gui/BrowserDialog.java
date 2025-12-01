@@ -172,7 +172,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		this.broker = b;
 		this.estimatedTotalMessageCount = nEstimatedMessageCount;
 		this.estimatedPageCount = (nEstimatedMessageCount / nItemsPerPage) + 1;
-		this.iconCellRenderer = new IconicTableCellRenderer();
+		this.iconCellRenderer = new IconicTableCellRenderer(config);
 		this.messageIcon = new ImageIcon("config/messageIcon32.png");
 		this.sempV2ActionClient = sempV2ActionClient;
 		this.downloadFolder = downloadFolder;
@@ -264,7 +264,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		int totalTableWidth = 1480;
 		// Create the dialog
 		String versionStr = config != null ? config.version : "v2.1.3";
-		dialog = new JDialog(parentFrame, "SQMB+ : " + this.queue, true);
+		dialog = new JDialog(parentFrame, "SolaceQueueBrowserGui 2.0 - " + this.queue, true);
 		logBoth("*** run: Dialog created, about to set visible ***");
 		dialog.setSize(1600, 1200);
 		dialog.setLayout(new BorderLayout());
@@ -274,7 +274,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		JPanel topPanel = new JPanel(new BorderLayout());
 
 		JButton refreshTopButton = new JButton("Refresh");
-        refreshTopButton.setBackground(new Color(220, 245, 255)); // Soft cyan background
+        refreshTopButton.setBackground(config != null ? config.buttonRefresh : new Color(220, 245, 255)); // Soft cyan background
+        refreshTopButton.setForeground(config != null ? config.buttonRefreshForeground : Color.BLACK);
         refreshTopButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 logBoth("*** BUTTON CLICK: Refresh button clicked ***");
@@ -286,7 +287,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		// Create filter button for top row
 		JButton filterTopButton = new JButton("Filter");
 		filterTopButton.setEnabled(true);
-		filterTopButton.setBackground(new Color(240, 230, 255)); // Soft purple background
+		filterTopButton.setBackground(config != null ? config.buttonFilter : new Color(240, 230, 255)); // Soft purple background
+		filterTopButton.setForeground(config != null ? config.buttonFilterForeground : Color.BLACK);
 		filterTopButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -323,7 +325,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		previousPageButton = new JButton("<< Prev");
 		previousPageButton.setEnabled(false);
-		previousPageButton.setBackground(new Color(230, 240, 255)); // Soft light blue background
+		previousPageButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255)); // Soft light blue background
+		previousPageButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		previousPageButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -334,7 +337,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		nextPageButton = new JButton("Next >>");
 		nextPageButton.setEnabled(false);
-		nextPageButton.setBackground(new Color(230, 240, 255)); // Soft light blue background
+		nextPageButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255)); // Soft light blue background
+		nextPageButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		nextPageButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -343,51 +347,52 @@ public class BrowserDialog implements IDragDropInstigator {
 			}
 		});
 
-		// Use improved topRowPanel layout from nram-dev but with Serif fonts
-		// Use Serif font like the queue details panel for consistency
-		String fontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : "Serif";
+		// Use improved topRowPanel layout from nram-dev but with configured fonts
+		// Use configured font family with fallback
+		String fontFamily = (config != null && config.fontFamily != null && !config.fontFamily.isEmpty()) ? config.fontFamily : (config != null ? config.defaultFontFamilyFallback : "Serif");
+		int labelFontSize = config != null ? config.labelFontSize : 16;
 		
 		// New top row layout: Browsing QUEUE_NAME | [<< Prev] Page N of ~ M [Next >>] | Page Size S | [Filter] (Status) | [Refresh]
 		String filterStatus = spec.isEmpty() ? "OFF" : "ON";
 		JPanel topRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
 		
 		JLabel browsingLabel = new JLabel("Browsing: " + this.queue);
-		browsingLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		browsingLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(browsingLabel);
 		
 		JLabel separator1 = new JLabel("|");
-		separator1.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		separator1.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(separator1);
 		
 		topRowPanel.add(previousPageButton);
 		
 		topLabel = new JLabel("Page " + nCurPage + " of ~ " + estimatedPageCount);
-		topLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		topLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(topLabel);
 		
 		topRowPanel.add(nextPageButton);
 		
 		JLabel separator2 = new JLabel("|");
-		separator2.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		separator2.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(separator2);
 		
 		JLabel pageSizeLabel = new JLabel("Page Size");
-		pageSizeLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		pageSizeLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(pageSizeLabel);
 		topRowPanel.add(cboMsgsPerPage);
 		
 		JLabel separator3 = new JLabel("|");
-		separator3.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		separator3.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(separator3);
 		
 		topRowPanel.add(filterTopButton);
 		
 		filterStatusLabel = new JLabel("(" + filterStatus + ")");
-		filterStatusLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		filterStatusLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(filterStatusLabel);
 		
 		JLabel separator4 = new JLabel("|");
-		separator4.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		separator4.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		topRowPanel.add(separator4);
 		
 		topRowPanel.add(refreshTopButton);
@@ -433,8 +438,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		});
 
 		// Set a custom cell renderer to alternate row colors
-		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer());
-		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer());
+		table.setDefaultRenderer(Object.class, new AlternatingRowColorRenderer(config));
+		table.getColumnModel().getColumn(0).setCellRenderer(new CheckboxTableCellRenderer(config));
 		table.getColumnModel().getColumn(1).setCellRenderer(iconCellRenderer);
 		
 		// Create select-all checkbox for header
@@ -548,7 +553,7 @@ public class BrowserDialog implements IDragDropInstigator {
         
 		// Enable gridlines with very light color
 		table.setShowGrid(true);
-		table.setGridColor(new Color(240, 240, 240)); // Very light gray, almost invisible
+		table.setGridColor(config != null ? config.gridColor : new Color(240, 240, 240)); // Very light gray, almost invisible
 		table.addMouseListener(new TableMouseListener(table, this));
 		table.addMouseMotionListener(new TableMouseMotionListener(table));
 		table.setTransferHandler(new QueueMessageTransferInstigatorHandler(this, "source"));
@@ -586,7 +591,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		delButton = new JButton("Delete");
 		delButton.setEnabled(false);
-		delButton.setBackground(new Color(255, 220, 220)); // Soft red background
+		delButton.setBackground(config != null ? config.buttonDelete : new Color(255, 220, 220)); // Soft red background
+		delButton.setForeground(config != null ? config.buttonDeleteForeground : Color.BLACK);
 		delButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -596,7 +602,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		nextMsgButton = new JButton("Next>");
 		nextMsgButton.setEnabled(false);
-		nextMsgButton.setBackground(new Color(230, 240, 255)); // Soft light blue background
+		nextMsgButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255)); // Soft light blue background
+		nextMsgButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		nextMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -605,7 +612,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		});
 		prevMsgButton = new JButton("<Prev");
 		prevMsgButton.setEnabled(false);
-		prevMsgButton.setBackground(new Color(230, 240, 255)); // Soft light blue background
+		prevMsgButton.setBackground(config != null ? config.buttonNavigation : new Color(230, 240, 255)); // Soft light blue background
+		prevMsgButton.setForeground(config != null ? config.buttonNavigationForeground : Color.BLACK);
 		prevMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -614,7 +622,8 @@ public class BrowserDialog implements IDragDropInstigator {
 		});
 		copyMessageMsgButton = new JButton("Copy");
 		copyMessageMsgButton.setEnabled(false);
-		copyMessageMsgButton.setBackground(new Color(220, 235, 255)); // Soft blue background
+		copyMessageMsgButton.setBackground(config != null ? config.buttonCopy : new Color(220, 235, 255)); // Soft blue background
+		copyMessageMsgButton.setForeground(config != null ? config.buttonCopyForeground : Color.BLACK);
 		copyMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -624,7 +633,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
 		moveMessageMsgButton = new JButton("Move");
 		moveMessageMsgButton.setEnabled(false);
-		moveMessageMsgButton.setBackground(new Color(255, 245, 220)); // Soft yellow background
+		moveMessageMsgButton.setBackground(config != null ? config.buttonMove : new Color(255, 245, 220)); // Soft yellow background
+		moveMessageMsgButton.setForeground(config != null ? config.buttonMoveForeground : Color.BLACK);
 		moveMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -638,7 +648,8 @@ public class BrowserDialog implements IDragDropInstigator {
 
         downloadMessageMsgButton = new JButton("Download");
         downloadMessageMsgButton.setEnabled(false);
-        downloadMessageMsgButton.setBackground(new Color(220, 255, 220)); // Soft green background
+        downloadMessageMsgButton.setBackground(config != null ? config.buttonRestore : new Color(220, 255, 220)); // Soft green background
+        downloadMessageMsgButton.setForeground(config != null ? config.buttonRestoreForeground : Color.BLACK);
         downloadMessageMsgButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -655,7 +666,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		// Add "Target Queue" label before comboBox
 		// Use the fontFamily already defined earlier in the method
 		JLabel targetQueueLabel = new JLabel("Target Queue");
-		targetQueueLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		targetQueueLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		buttonLeftPanel.add(targetQueueLabel);
 		buttonLeftPanel.add(comboBox);
 		buttonLeftPanel.add(downloadMessageMsgButton);
@@ -677,15 +688,16 @@ public class BrowserDialog implements IDragDropInstigator {
 		// Payload header with controls
 		JPanel payloadHeaderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		JLabel payloadLabel = new JLabel("Payload");
-		payloadLabel.setFont(new Font(fontFamily, Font.PLAIN, 16));
+		payloadLabel.setFont(new Font(fontFamily, Font.PLAIN, labelFontSize));
 		payloadHeaderPanel.add(payloadLabel);
 		
 		// Format selection
+		int buttonFontSize = config != null ? config.buttonFontSize : 14;
 		JLabel formatLabel = new JLabel("Format:");
-		formatLabel.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		formatLabel.setFont(new Font(fontFamily, Font.PLAIN, buttonFontSize));
 		payloadHeaderPanel.add(formatLabel);
 		formatComboBox = new JComboBox<>(new String[]{"Plain", "JSON", "YAML", "CSV"});
-		formatComboBox.setFont(new Font(fontFamily, Font.PLAIN, 14));
+		formatComboBox.setFont(new Font(fontFamily, Font.PLAIN, buttonFontSize));
 		formatComboBox.setSelectedItem("Plain");
 		formatComboBox.addActionListener(new ActionListener() {
 			@Override

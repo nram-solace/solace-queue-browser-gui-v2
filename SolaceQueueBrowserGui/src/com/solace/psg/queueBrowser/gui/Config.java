@@ -1,5 +1,6 @@
 package com.solace.psg.queueBrowser.gui;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,10 +24,41 @@ public class Config {
 	
 	// UI Configuration - OS-agnostic defaults
 	public String fontFamily = null; // null means use FlatLaf default
+	public String defaultFontFamilyFallback = "Serif"; // Fallback when fontFamily is null
 	public int defaultFontSize = 14;
 	public int headerFontSize = 16;
+	public int labelFontSize = 16;
+	public int buttonFontSize = 14;
+	public int tableFontSize = 14;
+	public int smallFontSize = 11;
+	public int largeFontSize = 20;
 	public int statusFontSize = 22;
 	public String version = "v2.1.3";
+	
+	// UI Colors - defaults matching current hardcoded values
+	public Color rowEvenBackground = new Color(248, 248, 248);
+	public Color rowOddBackground = Color.WHITE;
+	public Color rowSelectedBackground = new Color(144, 238, 144);
+	public Color rowForeground = Color.BLACK;
+	public Color rowSelectedForeground = Color.BLACK;
+	public Color textForeground = Color.BLACK;
+	public Color gridColor = new Color(240, 240, 240);
+	public Color buttonRefresh = new Color(220, 245, 255);
+	public Color buttonRefreshForeground = Color.BLACK;
+	public Color buttonFilter = new Color(240, 230, 255);
+	public Color buttonFilterForeground = Color.BLACK;
+	public Color buttonNavigation = new Color(230, 240, 255);
+	public Color buttonNavigationForeground = Color.BLACK;
+	public Color buttonDelete = new Color(255, 220, 220);
+	public Color buttonDeleteForeground = Color.BLACK;
+	public Color buttonCopy = new Color(220, 235, 255);
+	public Color buttonCopyForeground = Color.BLACK;
+	public Color buttonMove = new Color(255, 245, 220);
+	public Color buttonMoveForeground = Color.BLACK;
+	public Color buttonRestore = new Color(220, 255, 220);
+	public Color buttonRestoreForeground = Color.BLACK;
+	public Color buttonExit = new Color(220, 150, 150);
+	public Color buttonExitForeground = Color.WHITE;
 
 	/* removed for V1 release
 	public List<String> blackListedQueues = null;
@@ -232,17 +264,68 @@ public class Config {
 			// Load UI configuration
 			if (systemDoc.has("ui")) {
 				JSONObject uiConfig = systemDoc.getJSONObject("ui");
-				if (uiConfig.has("fontFamily") && !uiConfig.isNull("fontFamily")) {
-					fontFamily = uiConfig.getString("fontFamily");
+				
+				// Load font configuration if present
+				if (uiConfig.has("font")) {
+					JSONObject fontConfig = uiConfig.getJSONObject("font");
+					if (fontConfig.has("fontFamily") && !fontConfig.isNull("fontFamily")) {
+						fontFamily = fontConfig.getString("fontFamily");
+					}
+					if (fontConfig.has("defaultFontFamilyFallback")) {
+						defaultFontFamilyFallback = fontConfig.getString("defaultFontFamilyFallback");
+					}
+					if (fontConfig.has("defaultFontSize")) {
+						defaultFontSize = fontConfig.getInt("defaultFontSize");
+					}
+					if (fontConfig.has("headerFontSize")) {
+						headerFontSize = fontConfig.getInt("headerFontSize");
+					}
+					if (fontConfig.has("labelFontSize")) {
+						labelFontSize = fontConfig.getInt("labelFontSize");
+					}
+					if (fontConfig.has("buttonFontSize")) {
+						buttonFontSize = fontConfig.getInt("buttonFontSize");
+					}
+					if (fontConfig.has("tableFontSize")) {
+						tableFontSize = fontConfig.getInt("tableFontSize");
+					}
+					if (fontConfig.has("smallFontSize")) {
+						smallFontSize = fontConfig.getInt("smallFontSize");
+					}
+					if (fontConfig.has("largeFontSize")) {
+						largeFontSize = fontConfig.getInt("largeFontSize");
+					}
+					if (fontConfig.has("statusFontSize")) {
+						statusFontSize = fontConfig.getInt("statusFontSize");
+					}
 				}
-				if (uiConfig.has("defaultFontSize")) {
-					defaultFontSize = uiConfig.getInt("defaultFontSize");
-				}
-				if (uiConfig.has("headerFontSize")) {
-					headerFontSize = uiConfig.getInt("headerFontSize");
-				}
-				if (uiConfig.has("statusFontSize")) {
-					statusFontSize = uiConfig.getInt("statusFontSize");
+				
+				// Load colors if present
+				if (uiConfig.has("colors")) {
+					JSONObject colorsConfig = uiConfig.getJSONObject("colors");
+					rowEvenBackground = loadColor(colorsConfig, "rowEvenBackground", rowEvenBackground);
+					rowOddBackground = loadColor(colorsConfig, "rowOddBackground", rowOddBackground);
+					rowSelectedBackground = loadColor(colorsConfig, "rowSelectedBackground", rowSelectedBackground);
+					rowForeground = loadColor(colorsConfig, "rowForeground", rowForeground);
+					rowSelectedForeground = loadColor(colorsConfig, "rowSelectedForeground", rowSelectedForeground);
+					textForeground = loadColor(colorsConfig, "textForeground", textForeground);
+					gridColor = loadColor(colorsConfig, "gridColor", gridColor);
+					buttonRefresh = loadColor(colorsConfig, "buttonRefresh", buttonRefresh);
+					buttonRefreshForeground = loadColor(colorsConfig, "buttonRefreshForeground", buttonRefreshForeground);
+					buttonFilter = loadColor(colorsConfig, "buttonFilter", buttonFilter);
+					buttonFilterForeground = loadColor(colorsConfig, "buttonFilterForeground", buttonFilterForeground);
+					buttonNavigation = loadColor(colorsConfig, "buttonNavigation", buttonNavigation);
+					buttonNavigationForeground = loadColor(colorsConfig, "buttonNavigationForeground", buttonNavigationForeground);
+					buttonDelete = loadColor(colorsConfig, "buttonDelete", buttonDelete);
+					buttonDeleteForeground = loadColor(colorsConfig, "buttonDeleteForeground", buttonDeleteForeground);
+					buttonCopy = loadColor(colorsConfig, "buttonCopy", buttonCopy);
+					buttonCopyForeground = loadColor(colorsConfig, "buttonCopyForeground", buttonCopyForeground);
+					buttonMove = loadColor(colorsConfig, "buttonMove", buttonMove);
+					buttonMoveForeground = loadColor(colorsConfig, "buttonMoveForeground", buttonMoveForeground);
+					buttonRestore = loadColor(colorsConfig, "buttonRestore", buttonRestore);
+					buttonRestoreForeground = loadColor(colorsConfig, "buttonRestoreForeground", buttonRestoreForeground);
+					buttonExit = loadColor(colorsConfig, "buttonExit", buttonExit);
+					buttonExitForeground = loadColor(colorsConfig, "buttonExitForeground", buttonExitForeground);
 				}
 			}
 		} catch (JSONException e) {
@@ -386,5 +469,29 @@ public class Config {
 			}
 		}
 		throw new BrokerException("Broker not found: " + name);
+	}
+	
+	/**
+	 * Load a color from JSON array [R, G, B] format
+	 * @param colorsConfig JSON object containing color configurations
+	 * @param key The key for the color property
+	 * @param defaultValue Default color if key is not found or invalid
+	 * @return Color object loaded from config or default value
+	 */
+	private Color loadColor(JSONObject colorsConfig, String key, Color defaultValue) {
+		try {
+			if (colorsConfig.has(key)) {
+				JSONArray rgbArray = colorsConfig.getJSONArray(key);
+				if (rgbArray.length() >= 3) {
+					int r = rgbArray.getInt(0);
+					int g = rgbArray.getInt(1);
+					int b = rgbArray.getInt(2);
+					return new Color(r, g, b);
+				}
+			}
+		} catch (JSONException e) {
+			// If parsing fails, return default value
+		}
+		return defaultValue;
 	}
 }

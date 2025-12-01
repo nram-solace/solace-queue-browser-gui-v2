@@ -8,12 +8,34 @@ set -e  # Exit on any error
 # Change to the project directory (parent of scripts/)
 cd "$(dirname "$0")/.."
 
-# Find the JAR file
-JAR_FILE=$(ls target/SolaceQueueBrowserGui-*-jar-with-dependencies.jar 2>/dev/null | head -n 1)
+# Find the JAR file - check both development and distribution locations
+JAR_FILE=""
+
+# First, check in target/ directory (development environment)
+if [ -d "target" ]; then
+    JAR_FILE=$(ls target/SolaceQueueBrowserGui-*-jar-with-dependencies.jar 2>/dev/null | head -n 1)
+fi
+
+# If not found, check in current directory (distribution package)
+if [ -z "$JAR_FILE" ]; then
+    JAR_FILE=$(ls SolaceQueueBrowserGui-*-jar-with-dependencies.jar 2>/dev/null | head -n 1)
+fi
+
+# If still not found, check in parent directory (in case we're in a subdirectory)
+if [ -z "$JAR_FILE" ]; then
+    JAR_FILE=$(ls ../SolaceQueueBrowserGui-*-jar-with-dependencies.jar 2>/dev/null | head -n 1)
+fi
 
 if [ -z "$JAR_FILE" ]; then
-    echo "❌ Error: JAR file not found in target/ directory"
-    echo "Please run './scripts/build.sh' first to build the project"
+    echo "❌ Error: JAR file not found!"
+    echo ""
+    echo "Searched in:"
+    echo "  - target/ directory (development)"
+    echo "  - current directory (distribution)"
+    echo "  - parent directory"
+    echo ""
+    echo "If running from source, please run './scripts/build.sh' first to build the project"
+    echo "If running from distribution, ensure the JAR file is in the same directory as this script"
     exit 1
 fi
 

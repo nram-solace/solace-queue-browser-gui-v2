@@ -1,0 +1,44 @@
+{
+	"version": "v2.3.0",
+	"downloadFolder": "./downloads",
+	"ui": {
+		"font": {
+			"fontFamily": null,
+			"defaultFontFamilyFallback": "Serif",
+			"defaultFontSize": 14,
+			"headerFontSize": 16,
+			"labelFontSize": 16,
+			"buttonFontSize": 14,
+			"tableFontSize": 14,
+			"smallFontSize": 11,
+			"largeFontSize": 20,
+			"statusFontSize": 22
+		},
+		"colors": {
+			"rowEvenBackground": [248, 248, 248],
+			"rowOddBackground": [255, 255, 255],
+			"rowSelectedBackground": [144, 238, 144],
+			"rowForeground": [0, 0, 0],
+			"rowSelectedForeground": [0, 0, 0],
+			"textForeground": [0, 0, 0],
+			"gridColor": [240, 240, 240],
+			"buttonRefresh": [220, 245, 255],
+			"buttonRefreshForeground": [0, 0, 0],
+			"buttonFilter": [240, 230, 255],
+			"buttonFilterForeground": [0, 0, 0],
+			"buttonNavigation": [230, 240, 255],
+			"buttonNavigationForeground": [0, 0, 0],
+			"buttonDelete": [255, 220, 220],
+			"buttonDeleteForeground": [0, 0, 0],
+			"buttonCopy": [220, 235, 255],
+			"buttonCopyForeground": [0, 0, 0],
+			"buttonMove": [255, 245, 220],
+			"buttonMoveForeground": [0, 0, 0],
+			"buttonRestore": [220, 255, 220],
+			"buttonRestoreForeground": [0, 0, 0],
+			"buttonExit": [220, 150, 150],
+			"buttonExitForeground": [255, 255, 255]
+		}
+	}
+}
+
