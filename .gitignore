@@ -62,6 +62,7 @@ Thumbs.db
 # Other version directories (keeping only the code in git)
 SolaceQueueBrowserGui-v0/
 SolaceQueueBrowserGui-v1/
+SolaceQueueBrowserGui-v2.*/
 SolaceQueueBrowserGui-main/
 #SolaceQueueBrowserGui/
 # exclude local files
