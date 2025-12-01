@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 
+          http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+    <id>runtime-distribution</id>
+    <formats>
+        <format>zip</format>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>SolaceQueueBrowserGui-${app.version}</baseDirectory>
+    
+    <fileSets>
+        <!-- Include the JAR file with dependencies -->
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>${project.build.finalName}-jar-with-dependencies.jar</include>
+            </includes>
+        </fileSet>
+        
+        <!-- Include required config files -->
+        <fileSet>
+            <directory>${project.basedir}/config</directory>
+            <outputDirectory>config</outputDirectory>
+            <includes>
+                <include>system.json</include>
+                <include>log4j2.properties</include>
+                <include>*.png</include>
+            </includes>
+            <excludes>
+                <exclude>local-dev.json</exclude>
+                <exclude>sampleBrowserConfig.json</exclude>
+                <exclude>sig.txt</exclude>
+            </excludes>
+        </fileSet>
+        
+        <!-- Include user config templates (optional, users can add their own) -->
+        <fileSet>
+            <directory>${project.basedir}/config</directory>
+            <outputDirectory>config</outputDirectory>
+            <includes>
+                <include>default.json</include>
+                <include>solace-cloud.json</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        
+        <!-- Include runtime scripts -->
+        <fileSet>
+            <directory>${project.basedir}/scripts</directory>
+            <outputDirectory>scripts</outputDirectory>
+            <includes>
+                <include>run.sh</include>
+                <include>encrypt-password.sh</include>
+                <include>crypt-util.sh</include>
+            </includes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        
+        <!-- Include documentation -->
+        <fileSet>
+            <directory>${project.basedir}/..</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>README.md</include>
+                <include>USER_GUIDE.md</include>
+            </includes>
+            <filtered>false</filtered>
+        </fileSet>
+        
+        <!-- Include distribution-specific README -->
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>DISTRIBUTION_README.md</include>
+            </includes>
+        </fileSet>
+        
+        <!-- Create empty directories for runtime -->
+        <fileSet>
+            <directory>${project.basedir}/downloads</directory>
+            <outputDirectory>downloads</outputDirectory>
+            <includes>
+                <include>.gitkeep</include>
+            </includes>
+        </fileSet>
+        
+        <fileSet>
+            <directory>${project.basedir}/logs</directory>
+            <outputDirectory>logs</outputDirectory>
+            <includes>
+                <include>.gitkeep</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+    
+    <!-- Note: Only explicitly included files are packaged. 
+         Source code, build artifacts, and development files are automatically excluded
+         since they are not included in any fileSet above. -->
+</assembly>
+

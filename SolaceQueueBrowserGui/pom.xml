@@ -104,6 +104,49 @@
    <build>
       <finalName>SolaceQueueBrowserGui-${project.version}</finalName>
       <plugins>
+         <!-- Extract version from system.json before packaging -->
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+               <execution>
+                  <id>read-app-version</id>
+                  <phase>validate</phase>
+                  <goals>
+                     <goal>run</goal>
+                  </goals>
+                  <configuration>
+                     <target>
+                        <exec executable="${project.basedir}/scripts/extract-version.sh" outputproperty="app.version" failonerror="false" dir="${project.basedir}"/>
+                        <property name="app.version" value="${app.version}"/>
+                        <echo message="Set app.version to: [${app.version}]"/>
+                        <echo file="${project.build.directory}/app.version.properties" message="app.version=${app.version}"/>
+                     </target>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+         <!-- Load the version property for use in other plugins -->
+         <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
+            <version>1.2.1</version>
+            <executions>
+               <execution>
+                  <id>read-app-version-file</id>
+                  <phase>initialize</phase>
+                  <goals>
+                     <goal>read-project-properties</goal>
+                  </goals>
+                  <configuration>
+                     <files>
+                        <file>${project.build.directory}/app.version.properties</file>
+                     </files>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
@@ -130,10 +173,25 @@
             </configuration>
             <executions>
                <execution>
+                  <id>jar-with-dependencies</id>
                   <phase>package</phase>
                   <goals>
                      <goal>single</goal>
                   </goals>
+               </execution>
+               <execution>
+                  <id>runtime-distribution</id>
+                  <phase>package</phase>
+                  <goals>
+                     <goal>single</goal>
+                  </goals>
+                  <configuration>
+                     <descriptors>
+                        <descriptor>src/assembly/runtime-distribution.xml</descriptor>
+                     </descriptors>
+                     <appendAssemblyId>true</appendAssemblyId>
+                     <finalName>SolaceQueueBrowserGui-${app.version}</finalName>
+                  </configuration>
                </execution>
             </executions>
          </plugin>
