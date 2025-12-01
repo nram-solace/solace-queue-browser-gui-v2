@@ -15,7 +15,7 @@
         <!-- Include the JAR file with dependencies (renamed to use app.version) -->
         <fileSet>
             <directory>${project.build.directory}</directory>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>target</outputDirectory>
             <includes>
                 <include>SolaceQueueBrowserGui-${app.version}-jar-with-dependencies.jar</include>
             </includes>
