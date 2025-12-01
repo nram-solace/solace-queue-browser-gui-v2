@@ -19,6 +19,8 @@
 
 SQMB+ (Solace Queue Message Browser & More) is a desktop GUI application for browsing, inspecting, and managing messages in Solace queues. The application provides a comprehensive interface for message operations including viewing, filtering, moving, copying, deleting, and downloading messages.
 
+**Note:** This guide is written for users who have extracted the runtime distribution package. If you are building from source, refer to the main README.md for build instructions.
+
 ### Key Features
 
 - Multi-broker support with dynamic switching
@@ -40,29 +42,60 @@ SQMB+ (Solace Queue Message Browser & More) is a desktop GUI application for bro
 
 ## Installation and Setup
 
-### Building from Source
+### Extracting the Distribution Package
 
-The application can be built using Maven:
+1. Extract the distribution package:
+   ```bash
+   unzip SolaceQueueBrowserGui-v2.3.0-runtime-distribution.zip
+   cd SolaceQueueBrowserGui-v2.3.0/
+   ```
 
-```bash
-mvn clean package
-```
+   Or for TAR.GZ format:
+   ```bash
+   tar -xzf SolaceQueueBrowserGui-v2.3.0-runtime-distribution.tar.gz
+   cd SolaceQueueBrowserGui-v2.3.0/
+   ```
 
-This creates a self-contained executable JAR file in the `target/` directory: `SolaceQueueBrowserGui-1.0.0-jar-with-dependencies.jar`
+   **Note:** The version number (v2.3.0) may differ based on your distribution package. Check the package filename or `config/system.json` for the actual version.
+
+2. Verify the package contents:
+   ```
+   SolaceQueueBrowserGui-v2.3.0/
+   ├── SolaceQueueBrowserGui-v2.3.0-jar-with-dependencies.jar  # Application JAR
+   ├── config/                                                   # Configuration files
+   │   ├── system.json                                          # System configuration (required)
+   │   ├── log4j2.properties                                    # Logging configuration
+   │   ├── default.json                                         # Sample user configuration
+   │   ├── solace-cloud.json                                    # Sample Solace Cloud configuration
+   │   └── *.png                                                # Application icons
+   ├── scripts/                                                  # Runtime scripts
+   │   ├── run.sh                                               # Main application launcher
+   │   ├── encrypt-password.sh                                  # Password encryption utility
+   │   └── crypt-util.sh                                        # Cryptographic utilities
+   ├── downloads/                                                # Downloads directory (empty)
+   ├── logs/                                                     # Logs directory (empty)
+   ├── README.md                                                 # Project overview
+   ├── USER_GUIDE.md                                            # This guide
+   └── DISTRIBUTION_README.md                                   # Distribution-specific info
+   ```
 
 ### Running the Application
 
-#### Using the Run Script
+#### Using the Run Script (Recommended)
 
 ```bash
 ./scripts/run.sh -c config/default.json
 ```
 
+The run script automatically detects the JAR file location and works in the distribution package environment.
+
 #### Using Java Directly
 
 ```bash
-java -jar target/SolaceQueueBrowserGui-1.0.0-jar-with-dependencies.jar -c config/default.json
+java -jar SolaceQueueBrowserGui-v2.3.0-jar-with-dependencies.jar -c config/default.json
 ```
+
+**Note:** Replace `v2.3.0` with the actual version from your distribution package (check `config/system.json`).
 
 #### Command-Line Options
 
@@ -90,7 +123,7 @@ The system configuration is loaded first, followed by the user configuration fil
 
 ```json
 {
-  "version": "v2.2.0",
+  "version": "v2.3.0",
   "downloadFolder": "./downloads",
   "ui": {
     "fontFamily": null,
@@ -626,15 +659,17 @@ ENC:AES256GCM:{base64_encrypted_data}:{base64_iv}:{base64_salt}
 
 **Interactive Mode**:
 ```bash
-java -cp SolaceQueueBrowserGui-1.0.0-jar-with-dependencies.jar \
+java -cp SolaceQueueBrowserGui-v2.3.0-jar-with-dependencies.jar \
   com.solace.psg.util.PasswordEncryptionCLI encrypt
 ```
 
 **Non-Interactive Mode**:
 ```bash
-java -cp SolaceQueueBrowserGui-1.0.0-jar-with-dependencies.jar \
+java -cp SolaceQueueBrowserGui-v2.3.0-jar-with-dependencies.jar \
   com.solace.psg.util.PasswordEncryptionCLI encrypt "password" "masterKey"
 ```
+
+**Note:** Replace `v2.3.0` with the actual version from your distribution package (check `config/system.json`).
 
 #### Using the Shell Script
 
@@ -946,7 +981,8 @@ Log levels and formatting configured in `config/log4j2.properties`.
 
 ### Version History
 
-- **v2.1.3**: Added message restore functionality and improved operation logging
+- **v2.3.0**: Runtime distribution package with version from system.json
+- **v2.2.0**: Added message restore functionality and improved operation logging
 - **v2.1.2**: Multi-broker support, filtering, and password encryption
 - **v2.0.2**: SMF error handling improvements
 - **v2.0.0**: Major UI improvements and cross-platform compatibility
