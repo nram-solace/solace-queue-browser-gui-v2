@@ -1,6 +1,6 @@
 ![Project Logo](./img/logo.png "Queue Browser Logo")
 # SolaceQueueBrowserGui 2.0 - User Guide and Reference Manual
-v2.5.0 - Dec 02, 2025
+v2.5.2 - Dec 02, 2025
 
 ## Table of Contents
 
@@ -347,9 +347,12 @@ Located on the right side, displays detailed information for the selected queue:
 
 - Queue name
 - Message count
-- Spool usage details
-- Access type
-- Partition information (if applicable)
+- Access type (with inline indicators for Last Value Queue and Partitioned queues)
+- Max spool usage
+- Owner
+- Permission
+- Egress/Ingress enabled status
+- Partition count
 - Topic subscriptions (count and list of subscriptions)
 
 **Topic Subscriptions Display:**
@@ -415,7 +418,8 @@ When multiple brokers are configured:
 - **Exclusive**: Queues with `accessType = "exclusive"`
 - **Non-Exclusive**: Queues with `accessType = "non-exclusive"`
 - **Partitioned**: Queues with `partitionCount > 0`
-- **Last Value Queue**: Queues with `maxMsgSpoolUsage == 0`
+- **LVQ** (Last Value Queue): Queues with `maxMsgSpoolUsage == 0`
+  - Note: The filter checkbox displays as "LVQ" (abbreviated) with tooltip "Last Value Queue"
 
 **Behavior**:
 - Multiple types can be selected (OR logic)
@@ -1126,6 +1130,7 @@ Log levels and formatting configured in `config/log4j2.properties`.
 ## Appendix
 
 ### Version History
+- **v2.5.2**: Fixed Last Value Queue filter checkbox display on macOS (space constraint issue), added inline LVQ and Partitioned indicators in Access Type field
 - **v2.5.0**: Support for number and list of topic subscriptions in the main window
 - **v2.4.0**: Multiple UI profile support (Clean, Modern, Dark) for cross-platform customization
 - **v2.3.0**: Runtime distribution package and User Guide updates
