@@ -73,7 +73,7 @@
         
         <!-- Include documentation -->
         <fileSet>
-            <directory>${project.basedir}</directory>
+            <directory>${project.basedir}/..</directory>
             <outputDirectory>.</outputDirectory>
             <includes>
                 <include>README.md</include>
@@ -88,6 +88,16 @@
             <includes>
                 <include>USER_GUIDE.md</include>
                 <include>img/**</include>
+            </includes>
+            <filtered>false</filtered>
+        </fileSet>
+        
+        <!-- Include img folder at root level for README.md references -->
+        <fileSet>
+            <directory>${project.basedir}/docs/img</directory>
+            <outputDirectory>img</outputDirectory>
+            <includes>
+                <include>**</include>
             </includes>
             <filtered>false</filtered>
         </fileSet>

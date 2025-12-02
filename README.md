@@ -1,16 +1,17 @@
-![Project Logo](./SolaceQueueBrowserGui/docs/img/logo.png "SolaceQueueBrowserGui 2.0 Logo")
+![Project Logo](./img/logo.png "SolaceQueueBrowserGui 2.0 Logo")
 
 # SolaceQueueBrowserGui 2.0
+v2.4.3 - Decv 01, 2025
 
 Desktop GUI for browsing Solace Queues and managing messages.
 
-![](./SolaceQueueBrowserGui/docs/img/overview1.png)
+![](./img/overview1.png)
 
 ## Overview
 
 SolaceQueueBrowserGui 2.0 is a desktop application that provides a comprehensive interface for browsing, inspecting, and managing messages in Solace queues.
 
-Please see **[User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md)** for detailed instructions, configuration examples, command-line options, troubleshooting, and additional information.
+Please see **[User Guide](./docs/USER_GUIDE.md)** for detailed instructions, configuration examples, command-line options, troubleshooting, and additional information.
 
 ### Key Features
 
@@ -72,7 +73,7 @@ Please see **[User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md)** for deta
    ./scripts/run.sh -c config/default.json
    ```
 
-For detailed instructions, see the [User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md).
+For detailed instructions, see the [User Guide](./docs/USER_GUIDE.md).
 
 ## Configuration
 
@@ -87,7 +88,7 @@ The application uses JSON configuration files to connect to Solace brokers. Conf
 
 **Note:** The application requires both SEMP admin credentials (for queue management) and messaging client credentials (for message browsing).
 
-For detailed configuration instructions, file formats, and examples, see the [Configuration section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#configuration) in the User Guide.
+For detailed configuration instructions, file formats, and examples, see the [Configuration section](./docs/USER_GUIDE.md#configuration) in the User Guide.
 
 ## Password Encryption
 
@@ -97,7 +98,7 @@ The application supports AES-256-GCM encryption for passwords stored in configur
 - Encrypted passwords use the format: `ENC:AES256GCM:...`
 - Master password can be provided via GUI prompt or command-line option
 
-For detailed instructions on encrypting passwords, command-line options, and security considerations, see the [Password Encryption section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#password-encryption) in the User Guide.
+For detailed instructions on encrypting passwords, command-line options, and security considerations, see the [Password Encryption section](./docs/USER_GUIDE.md#password-encryption) in the User Guide.
 
 ## Message Operations
 
@@ -112,7 +113,7 @@ The application provides comprehensive message management capabilities:
 
 Operations support single message or bulk selection. Messages can be filtered by headers, properties, and payload content before operations.
 
-For detailed instructions on performing operations, file formats, and workflow, see the [Operations section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#operations) in the User Guide.
+For detailed instructions on performing operations, file formats, and workflow, see the [Operations section](./docs/USER_GUIDE.md#operations) in the User Guide.
 
 ## Features in Detail
 
@@ -128,7 +129,7 @@ Filter messages by headers, user properties, and payload content. Multiple filte
 ### Bulk Operations
 Select and operate on multiple messages simultaneously with confirmation dialogs and automatic selection management.
 
-For detailed feature descriptions, usage instructions, and examples, see the [User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md).
+For detailed feature descriptions, usage instructions, and examples, see the [User Guide](./docs/USER_GUIDE.md).
 
 ## Package Contents
 
@@ -141,7 +142,7 @@ For detailed feature descriptions, usage instructions, and examples, see the [Us
 
 ## Documentation
 
-- **[User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md)** - Complete user guide and reference manual with detailed instructions, configuration examples, command-line options, troubleshooting, and more
+- **[User Guide](./docs/USER_GUIDE.md)** - Complete user guide and reference manual with detailed instructions, configuration examples, command-line options, troubleshooting, and more
 
 ## Disclaimer
 
