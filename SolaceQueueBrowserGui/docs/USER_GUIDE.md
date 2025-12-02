@@ -650,93 +650,6 @@ Opens when clicking "Filter" button in message browser.
 - Click "Apply" to clear filters
 
 
----
-
-
-
----
-
-## Troubleshooting
-
-### Connection Issues
-
-#### SEMP Connection Failures
-
-**Solutions**:
-- Verify SEMP host URL is correct and accessible
-- Check SEMP admin credentials
-- Verify network connectivity to broker
-- Check firewall rules for SEMP port (typically 8080 for HTTP, 943 for HTTPS)
-
-
-#### SMF (Messaging) Connection Failures
-
-**Symptoms**:
-- Message browser opens but shows no messages
-- Error dialog shows SMF connection failure
-
-**Solutions**:
-- Verify messaging host URL is correct
-- Check messaging client credentials
-- Verify VPN name matches configuration
-- Check network connectivity to messaging endpoint
-- Verify firewall rules for messaging port (typically 55555 for TCP, 55443 for TCPS)
-
-### Password Decryption Errors
-
-**Symptoms**:
-- Error dialog: "Failed to decrypt password" or "Wrong master password"
-
-**Solutions**:
-- Verify master password is correct
-- Ensure master password matches the one used for encryption
-- Check for special characters that may need quoting in command line
-- Use GUI prompt instead of command-line password if issues persist
-
-### Message Loading Issues
-
-**Symptoms**:
-- Messages do not appear in browser
-- Empty message table
-
-**Solutions**:
-- Check queue has messages (verify in main window)
-- Verify SMF connection is successful
-- Check filter settings (may be filtering out all messages)
-- Try refreshing the page
-- Check application logs in `logs/browser.log`
-
-### UI Display Issues
-
-**Symptoms**:
-- Text clipped or not displaying
-- Fonts not rendering correctly
-- Profile not found error
-
-**Solutions**:
-- Check UI configuration in config file
-- Verify font family is available on your system
-- Set `fontFamily` to `null` to use system defaults
-- Check log files for font-related errors
-- Verify profile name is correct (case-sensitive: "Clean", "Modern", "Dark")
-- If using command-line override, ensure profile exists in `profiles` section
-- Check that `profiles` section exists in `config/system.json` if using profile-based config
-
-
-### Performance Issues
-
-**Symptoms**:
-- Slow queue list loading
-- Slow message browsing
-
-**Solutions**:
-- Reduce page size for message browsing
-- Use queue filters to limit displayed queues
-- Check network latency to broker
-- For large queue counts, filtering helps reduce UI load
-
----
-
 ## UI Profiles
 
 The application supports multiple UI profiles for different platforms and themes. Profiles allow you to customize fonts, colors, button icons, and other UI elements to match your platform or preference. The application uses **FlatLaf** (Flat Look and Feel) as the underlying UI framework, with FlatLightLaf for light themes and FlatDarkLaf for the Dark profile.
@@ -838,6 +751,93 @@ Use the `--ui-profile` option to override the config file setting without editin
 Existing installations using the legacy single-config format continue to work:
 - If `profiles` section doesn't exist, uses `font`/`colors` sections
 - Legacy configs use FlatLightLaf by default
+
+
+
+---
+
+## Troubleshooting
+
+### Connection Issues
+
+#### SEMP Connection Failures
+
+**Solutions**:
+- Verify SEMP host URL is correct and accessible
+- Check SEMP admin credentials
+- Verify network connectivity to broker
+- Check firewall rules for SEMP port (typically 8080 for HTTP, 943 for HTTPS)
+
+
+#### SMF (Messaging) Connection Failures
+
+**Symptoms**:
+- Message browser opens but shows no messages
+- Error dialog shows SMF connection failure
+
+**Solutions**:
+- Verify messaging host URL is correct
+- Check messaging client credentials
+- Verify VPN name matches configuration
+- Check network connectivity to messaging endpoint
+- Verify firewall rules for messaging port (typically 55555 for TCP, 55443 for TCPS)
+
+### Password Decryption Errors
+
+**Symptoms**:
+- Error dialog: "Failed to decrypt password" or "Wrong master password"
+
+**Solutions**:
+- Verify master password is correct
+- Ensure master password matches the one used for encryption
+- Check for special characters that may need quoting in command line
+- Use GUI prompt instead of command-line password if issues persist
+
+### Message Loading Issues
+
+**Symptoms**:
+- Messages do not appear in browser
+- Empty message table
+
+**Solutions**:
+- Check queue has messages (verify in main window)
+- Verify SMF connection is successful
+- Check filter settings (may be filtering out all messages)
+- Try refreshing the page
+- Check application logs in `logs/browser.log`
+
+### UI Display Issues
+
+**Symptoms**:
+- Text clipped or not displaying
+- Fonts not rendering correctly
+- Profile not found error
+
+**Solutions**:
+- Check UI configuration in config file
+- Verify font family is available on your system
+- Set `fontFamily` to `null` to use system defaults
+- Check log files for font-related errors
+- Verify profile name is correct (case-sensitive: "Clean", "Modern", "Dark")
+- If using command-line override, ensure profile exists in `profiles` section
+- Check that `profiles` section exists in `config/system.json` if using profile-based config
+
+
+### Performance Issues
+
+**Symptoms**:
+- Slow queue list loading
+- Slow message browsing
+
+**Solutions**:
+- Reduce page size for message browsing
+- Use queue filters to limit displayed queues
+- Check network latency to broker
+- For large queue counts, filtering helps reduce UI load
+
+---
+
+
 
 ---
 

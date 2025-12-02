@@ -4,13 +4,18 @@
 
 Desktop GUI for browsing Solace Queues and managing messages.
 
+![](./SolaceQueueBrowserGui/docs/img/overview1.png)
+
 ## Overview
 
-SolaceQueueBrowserGui 2.0 is a desktop application that provides a comprehensive interface for browsing, inspecting, and managing messages in Solace queues. 
+SolaceQueueBrowserGui 2.0 is a desktop application that provides a comprehensive interface for browsing, inspecting, and managing messages in Solace queues.
+
+Please see **[User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md)** for detailed instructions, configuration examples, command-line options, troubleshooting, and additional information.
 
 ### Key Features
 
 - **Multi-broker support** - Connect to and switch between multiple Solace brokers dynamically
+
 - **Queue management** - View, search, filter, and sort queues with real-time updates
   - Search queues by name (case-insensitive)
   - Filter by queue type (Exclusive, Non-Exclusive, Partitioned, Last Value Queue)
@@ -38,6 +43,7 @@ SolaceQueueBrowserGui 2.0 is a desktop application that provides a comprehensive
   - Master password prompt or command-line option
   - Backward compatible with plain text passwords
 - **Cross-platform** - Runs on Windows, macOS, Linux, and WSL
+- **Multiple profile support** - Switch between UI profiles (Clean, Dark, Modern, default) for customized appearance and better cross platform support.
 
 ## Quick Start
 
@@ -66,109 +72,63 @@ SolaceQueueBrowserGui 2.0 is a desktop application that provides a comprehensive
    ./scripts/run.sh -c config/default.json
    ```
 
-For detailed instructions, see the [User Guide](./docs/USER_GUIDE.md).
+For detailed instructions, see the [User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md).
 
 ## Configuration
 
-The application uses JSON configuration files to connect to Solace brokers. A sample configuration file is provided at `config/sample-config.json` for reference.
+The application uses JSON configuration files to connect to Solace brokers. Configuration requires:
 
-**To get started:**
+- **Broker connection details** - SEMP host, messaging host, VPN name, and credentials
+- **System configuration** - UI profiles, fonts, colors, and other system settings
+
+**Quick setup:**
 1. Copy `config/sample-config.json` to `config/default.json`
-2. Edit `config/default.json` with your specific broker connection details (hostnames, credentials, VPN names, etc.)
-
-**Basic configuration structure:**
-```json
-{
-  "eventBrokers": [
-    {
-      "name": "My Broker",
-      "sempHost": "https://broker.example.com:943/SEMP/v2/config",
-      "sempAdminUser": "admin",
-      "sempAdminPw": "password",
-      "msgVpnName": "default",
-      "messagingHost": "tcps://broker.example.com:55443",
-      "messagingClientUsername": "client",
-      "messagingPw": "password"
-    }
-  ]
-}
-```
+2. Edit `config/default.json` with your broker connection details
 
 **Note:** The application requires both SEMP admin credentials (for queue management) and messaging client credentials (for message browsing).
 
-For detailed configuration instructions, see the [User Guide](./docs/USER_GUIDE.md).
+For detailed configuration instructions, file formats, and examples, see the [Configuration section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#configuration) in the User Guide.
 
 ## Password Encryption
 
-The application supports encrypted passwords for secure configuration file storage. Use the `crypt-util.sh` script to encrypt passwords:
+The application supports AES-256-GCM encryption for passwords stored in configuration files. This allows secure storage of credentials in version control or shared configuration files.
 
-```bash
-./scripts/crypt-util.sh encrypt
-```
+- Encrypt passwords using the `crypt-util.sh` utility
+- Encrypted passwords use the format: `ENC:AES256GCM:...`
+- Master password can be provided via GUI prompt or command-line option
 
-Encrypted passwords use the format: `ENC:AES256GCM:...`
-
-When encrypted passwords are detected, the application will prompt for a master password (or use `--master-password` command-line option).
-
-For more information, see the [Password Encryption section](./docs/USER_GUIDE.md#password-encryption) in the User Guide.
+For detailed instructions on encrypting passwords, command-line options, and security considerations, see the [Password Encryption section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#password-encryption) in the User Guide.
 
 ## Message Operations
 
-### Browse Messages
-Select a queue and click "Browse" to open the message browser. Messages are displayed in a paginated table with detailed information.
+The application provides comprehensive message management capabilities:
 
-### Move, Copy, and Delete
-- **Move**: Transfers messages from source queue to target queue (removes from source)
-- **Copy**: Duplicates messages to target queue (keeps in source)
-- **Delete**: Permanently removes messages from queue
+- **Browse** - Inspect messages with paginated navigation and detailed views
+- **Move** - Transfer messages between queues (removes from source)
+- **Copy** - Duplicate messages to another queue (keeps in source)
+- **Delete** - Remove messages from queues
+- **Download** - Save messages to ZIP files for offline analysis
+- **Restore** - Republish previously downloaded messages back to queues
 
-Operations can be performed on single messages or multiple selected messages.
+Operations support single message or bulk selection. Messages can be filtered by headers, properties, and payload content before operations.
 
-### Download Messages
-Download selected messages to ZIP files for offline analysis:
-- Messages saved to `./downloads/{hostname}/{vpn-name}/{queue-name}/`
-- Each message saved as individual ZIP file with payload, headers, and user properties
-- Files organized by broker, VPN, and queue for easy management
-
-### Restore Messages
-Restore previously downloaded messages back to queues:
-- Select target queue and click "Restore"
-- Browse to directory containing downloaded message ZIP files
-- Select messages to restore (supports bulk selection)
-- Messages are republished with original headers and properties preserved
-- Can restore to different queues/VPNs/hosts with confirmation
-
-For detailed instructions, see the [Operations section](./docs/USER_GUIDE.md#operations) in the User Guide.
+For detailed instructions on performing operations, file formats, and workflow, see the [Operations section](./SolaceQueueBrowserGui/docs/USER_GUIDE.md#operations) in the User Guide.
 
 ## Features in Detail
 
 ### Queue Management
-- **Real-time search** - Filter queues by name as you type
-- **Queue type filters** - Show Exclusive, Non-Exclusive, Partitioned, or Last Value Queues
-- **Category filters** - Display User queues, System queues, or All queues
-- **Sorting** - Sort by name, spool size, spool usage, or usage percentage (ascending/descending)
-- **Queue details** - View detailed information for selected queue (message count, spool usage, access type)
+Real-time search, filtering by type and category, and sorting capabilities help you quickly find and manage queues across multiple brokers.
 
 ### Message Browser
-- **Pagination** - Navigate through messages with Previous/Next page controls
-- **Configurable page size** - Adjust number of messages per page (default: 20)
-- **Message selection** - Select individual messages or use select-all checkbox
-- **Message details** - View headers, user properties, and payload in separate panels
-- **Payload formatting** - Format payload as Plain, JSON, YAML, or CSV
-- **Text wrapping** - Toggle text wrapping for long payloads
+Paginated message browser with configurable page size, detailed message inspection, and support for multiple payload formats (Plain, JSON, YAML, CSV).
 
 ### Message Filtering
-- **Header filters** - Filter by Destination, TTL, Delivery Mode, Correlation ID, etc.
-- **User property filters** - Filter by custom user-defined properties
-- **Payload filters** - Search payload content (contains/does not contain)
-- **Combined filters** - Apply multiple filter conditions simultaneously
-- **Filter status** - Clear indication when filters are active
+Filter messages by headers, user properties, and payload content. Multiple filter conditions can be combined for precise message selection.
 
 ### Bulk Operations
-- Select multiple messages using checkboxes
-- Perform operations on all selected messages at once
-- Confirmation dialogs show operation results
-- Automatic selection management after operations
+Select and operate on multiple messages simultaneously with confirmation dialogs and automatic selection management.
+
+For detailed feature descriptions, usage instructions, and examples, see the [User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md).
 
 ## Package Contents
 
@@ -181,9 +141,9 @@ For detailed instructions, see the [Operations section](./docs/USER_GUIDE.md#ope
 
 ## Documentation
 
-- **[User Guide](./docs/USER_GUIDE.md)** - Complete user guide and reference manual with detailed instructions, configuration examples, troubleshooting, and more
+- **[User Guide](./SolaceQueueBrowserGui/docs/USER_GUIDE.md)** - Complete user guide and reference manual with detailed instructions, configuration examples, command-line options, troubleshooting, and more
 
-## Important Disclaimer
+## Disclaimer
 
 **This tool is NOT a Solace supported product.** It has been created by Solace's professional services team to augment Solace products.
 
