@@ -1,6 +1,6 @@
 ![Project Logo](./img/logo.png "Queue Browser Logo")
 # SolaceQueueBrowserGui 2.0 - User Guide and Reference Manual
-v2.4.2 - Dec 01, 2025
+v2.5.0 - Dec 02, 2025
 
 ## Table of Contents
 
