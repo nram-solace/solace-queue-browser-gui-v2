@@ -1062,6 +1062,10 @@ public class SempClient {
         public String rejectMsgToSenderOnDiscardBehavior;
 		public int partitionCount;
         
+        // Helper method to determine if this is a Last Value Queue
+        public boolean isLastValueQueue() {
+        	return maxMsgSpoolUsage == 0;
+        }
 	}	
 
 	public QueueInfo getQueueInfo(String msgVpnName, String queueName) throws SempException {
@@ -1101,6 +1105,9 @@ public class SempClient {
 		JSONObject msgs = collections.getJSONObject("msgs");
 		rc.msgCount = msgs.getInt("count");
 
+		// Debug logging for Last Value Queue detection (LVQ is when maxMsgSpoolUsage == 0)
+		logger.info("DEBUG [macOS]: Queue '" + queueName + "' - maxMsgSpoolUsage = " + rc.maxMsgSpoolUsage + ", isLastValueQueue = " + rc.isLastValueQueue());
+		
 		return rc;
 	}
 

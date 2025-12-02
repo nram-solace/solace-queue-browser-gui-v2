@@ -621,8 +621,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 			});
 			
-			JPanel listPanel = new JPanel(new BorderLayout());
-			listPanel.setPreferredSize(new Dimension(400, listPanel.getPreferredSize().height)); // Set the preferred width
+		JPanel listPanel = new JPanel(new BorderLayout());
+		listPanel.setPreferredSize(new Dimension(450, listPanel.getPreferredSize().height)); // Increased width for better layout on macOS
 			
 			// Create filter and sort panel
 			JPanel filterSortPanel = createFilterSortPanel();
@@ -1719,9 +1719,12 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 	private void addRowToDisplay(QueueInfo info, StringBuilder sb, String fieldName, boolean big) {
          try {
+             logger.info("DEBUG [macOS]: addRowToDisplay - fieldName = " + fieldName);
              Field field = info.getClass().getDeclaredField(fieldName);
              field.setAccessible(true); // Allow access to private fields
              Object value = field.get(info);
+             logger.info("DEBUG [macOS]: addRowToDisplay - field '" + fieldName + "' raw value = " + value);
+             
              String strValue = "---";
              if (value != null) {
             	 strValue = value.toString();
@@ -1741,9 +1744,12 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
              }
              
              String fieldNameForDisply = splitCamelCase(fieldName);
+             logger.info("DEBUG [macOS]: addRowToDisplay - field '" + fieldName + "' display name = '" + fieldNameForDisply + "', value = '" + strValue + "'");
              sb.append("<tr><td width='180px' align='right'>" + fieldNameForDisply + ":</td><td" + style + " align='left'>" + strValue + "</td></tr>");
+             logger.info("DEBUG [macOS]: addRowToDisplay - Successfully added field '" + fieldName + "' to display");
              
 		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+			logger.error("DEBUG [macOS]: addRowToDisplay - ERROR adding field '" + fieldName + "'", e);
 			e.printStackTrace();
 		} 
          
@@ -1811,17 +1817,35 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		sb.append("<html>");
 		sb.append("<div style='width: 580px; text-align: left; vertical-align:top; font-family: " + htmlFontFamily + ";'>");
 
-		sb.append("<div style='width: 580px; text-align: left; vertical-align:top; font-family: " + htmlFontFamily + ";'>");
-		sb.append("<table>");
-		addRowToDisplay(info, sb, "name", true);
-		addRowToDisplay(info, sb, "msgCount", false);
-		addRowToDisplay(info, sb, "accessType", false);
-		addRowToDisplay(info, sb, "maxMsgSpoolUsage", false);
-		addRowToDisplay(info, sb, "owner", false);
-		addRowToDisplay(info, sb, "permission", false);
-		addRowToDisplay(info, sb, "egressEnabled", false);
-		addRowToDisplay(info, sb, "ingressEnabled", false);
-		addRowToDisplay(info, sb, "partitionCount", false);
+	sb.append("<div style='width: 580px; text-align: left; vertical-align:top; font-family: " + htmlFontFamily + ";'>");
+	sb.append("<table>");
+	addRowToDisplay(info, sb, "name", true);
+	addRowToDisplay(info, sb, "msgCount", false);
+	
+	// Add Access Type with LVQ and/or Partitioned indicators
+	boolean isLVQ = info.isLastValueQueue();
+	boolean isPartitioned = info.partitionCount > 0;
+	String accessTypeDisplay = info.accessType;
+	
+	// Add indicators - can have both LVQ and Partitioned
+	if (isLVQ && isPartitioned) {
+		accessTypeDisplay += " (LVQ, Partitioned)";
+	} else if (isLVQ) {
+		accessTypeDisplay += " (LVQ)";
+	} else if (isPartitioned) {
+		accessTypeDisplay += " (Partitioned)";
+	}
+	
+	logger.info("DEBUG [macOS]: Queue '" + info.name + "' - maxMsgSpoolUsage = " + info.maxMsgSpoolUsage + ", isLVQ = " + isLVQ + ", partitionCount = " + info.partitionCount + ", accessTypeDisplay = '" + accessTypeDisplay + "'");
+	String fieldNameForDisplay = splitCamelCase("accessType");
+	sb.append("<tr><td width='180px' align='right'>" + fieldNameForDisplay + ":</td><td align='left'>" + accessTypeDisplay + "</td></tr>");
+	
+	addRowToDisplay(info, sb, "maxMsgSpoolUsage", false);
+	addRowToDisplay(info, sb, "owner", false);
+	addRowToDisplay(info, sb, "permission", false);
+	addRowToDisplay(info, sb, "egressEnabled", false);
+	addRowToDisplay(info, sb, "ingressEnabled", false);
+	addRowToDisplay(info, sb, "partitionCount", false);
 
 		// Add topic subscriptions row
 		addSubscriptionsToDisplay(sb, subscriptions);
@@ -1958,22 +1982,28 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		searchPanel.add(searchField);
 		panel.add(searchPanel);
 		
-		// Queue type filters
-		JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		typePanel.add(new JLabel("Type:"));
-		filterExclusive = new JCheckBox("Exclusive");
-		filterNonExclusive = new JCheckBox("Non-Exclusive");
-		filterPartitioned = new JCheckBox("Partitioned");
-		filterLastValue = new JCheckBox("Last Value");
-		filterExclusive.addActionListener(e -> applyFiltersAndSorting());
-		filterNonExclusive.addActionListener(e -> applyFiltersAndSorting());
-		filterPartitioned.addActionListener(e -> applyFiltersAndSorting());
-		filterLastValue.addActionListener(e -> applyFiltersAndSorting());
-		typePanel.add(filterExclusive);
-		typePanel.add(filterNonExclusive);
-		typePanel.add(filterPartitioned);
-		typePanel.add(filterLastValue);
-		panel.add(typePanel);
+	// Queue type filters
+	JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+	typePanel.add(new JLabel("Type:"));
+	filterExclusive = new JCheckBox("Exclusive");
+	filterNonExclusive = new JCheckBox("Non-Exclusive");
+	filterPartitioned = new JCheckBox("Partitioned");
+	filterLastValue = new JCheckBox("LVQ");
+	
+	// Set tooltip for LVQ
+	filterLastValue.setToolTipText("Last Value Queue");
+	
+	filterExclusive.addActionListener(e -> applyFiltersAndSorting());
+	filterNonExclusive.addActionListener(e -> applyFiltersAndSorting());
+	filterPartitioned.addActionListener(e -> applyFiltersAndSorting());
+	filterLastValue.addActionListener(e -> applyFiltersAndSorting());
+	
+	typePanel.add(filterExclusive);
+	typePanel.add(filterNonExclusive);
+	typePanel.add(filterPartitioned);
+	typePanel.add(filterLastValue);
+	
+	panel.add(typePanel);
 		
 		// Category filter
 		JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -2050,6 +2080,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			(filterPartitioned != null && filterPartitioned.isSelected()) ||
 			(filterLastValue != null && filterLastValue.isSelected());
 		
+		logger.info("DEBUG [macOS]: Type filter active = " + hasTypeFilter + ", filterLastValue.isSelected() = " + (filterLastValue != null && filterLastValue.isSelected()));
+		
 		if (hasTypeFilter) {
 			filteredQueues = filteredQueues.stream()
 				.filter(q -> {
@@ -2064,6 +2096,13 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 						matches = true;
 					}
 					if (filterLastValue.isSelected() && q.maxMsgSpoolUsage == 0) {
+						logger.info("DEBUG [macOS]: Queue '" + q.name + "' matched Last Value filter (maxMsgSpoolUsage = 0)");
+						matches = true;
+					}
+					if (filterLastValue.isSelected() && q.maxMsgSpoolUsage != 0) {
+						logger.info("DEBUG [macOS]: Queue '" + q.name + "' did NOT match Last Value filter (maxMsgSpoolUsage = " + q.maxMsgSpoolUsage + ")");
+					}
+					if (matches) {
 						matches = true;
 					}
 					return matches;
@@ -2378,15 +2417,17 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		
 		String versionStr = tempCfg.version;
 		
-		System.out.println("=================================================================");
-		System.out.println("Starting Solace Queue Browser - Version: " + versionStr);
-		System.out.println("=================================================================");
+	System.out.println("=================================================================");
+	System.out.println("Starting Solace Queue Browser - Version: " + versionStr);
+	System.out.println("*** BUILD ID: LVQ-DEBUG-2024-12-02-v2.5.2-macOS-Troubleshooting ***");
+	System.out.println("=================================================================");
 
-		logger.info("=================================================================");
-		logger.info("Starting Solace Queue Browser - Version: " + versionStr);
-		logger.info("=================================================================");
-		logger.info("*** VERIFICATION: This is v2.1.1 with password encryption support ***");
-		logger.info("Configuration File: " + parser.configFileProvided);
+	logger.info("=================================================================");
+	logger.info("Starting Solace Queue Browser - Version: " + versionStr);
+	logger.info("*** BUILD ID: LVQ-DEBUG-2024-12-02-v2.5.2-macOS-Troubleshooting ***");
+	logger.info("=================================================================");
+	logger.info("*** VERIFICATION: This is v2.1.1 with password encryption support ***");
+	logger.info("Configuration File: " + parser.configFileProvided);
 
 		QueueBrowserMainWindow me = new QueueBrowserMainWindow(parser.configFileProvided, parser.masterPasswordProvided, parser.uiProfileProvided);
 		me.run();
