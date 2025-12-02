@@ -26,6 +26,9 @@ public class Config {
 	private int selectedBrokerIndex = 0;
 	public String downloadFolder = "./downloads";
 	
+	// Queue display configuration
+	public int maxTopicSubscriptionsToDisplay = 5; // Default: show up to 5 topic subscriptions
+	
 	// UI Configuration - OS-agnostic defaults
 	public String fontFamily = null; // null means use FlatLaf default
 	public String defaultFontFamilyFallback = "Serif"; // Fallback when fontFamily is null
@@ -268,6 +271,15 @@ public class Config {
 			// Load download folder
 			if (systemDoc.has("downloadFolder")) {
 				downloadFolder = systemDoc.getString("downloadFolder");
+			}
+			
+			// Load queue display configuration
+			if (systemDoc.has("maxTopicSubscriptionsToDisplay")) {
+				maxTopicSubscriptionsToDisplay = systemDoc.getInt("maxTopicSubscriptionsToDisplay");
+				if (maxTopicSubscriptionsToDisplay < 0) {
+					logger.warn("maxTopicSubscriptionsToDisplay must be non-negative, using default value of 5");
+					maxTopicSubscriptionsToDisplay = 5;
+				}
 			}
 			
 			// Load UI profile

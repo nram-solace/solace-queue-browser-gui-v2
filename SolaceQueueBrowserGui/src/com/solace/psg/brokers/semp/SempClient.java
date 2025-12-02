@@ -1103,6 +1103,34 @@ public class SempClient {
 
 		return rc;
 	}
+
+	/**
+	 * Retrieves topic subscriptions for a queue.
+	 * 
+	 * @param msgVpnName Message VPN name
+	 * @param queueName Queue name
+	 * @return List of topic subscription strings
+	 * @throws SempException if API call fails
+	 */
+	public List<String> getQueueTopicSubscriptions(String msgVpnName, String queueName) throws SempException {
+		logger.info("getQueueTopicSubscriptions called - VPN: " + msgVpnName + ", Queue Name: '" + queueName + "'");
+		ArrayList<String> subscriptions = new ArrayList<String>();
+		String encodedQueueName = encodeQueueNameForUrl(queueName);
+		logger.info("getQueueTopicSubscriptions - Encoded queue name: '" + queueName + "' -> '" + encodedQueueName + "'");
+		
+		String resource = "/msgVpns/" + msgVpnName + "/queues/" + encodedQueueName + "/subscriptions?select=subscriptionTopic";
+		
+		try {
+			String responseText = this.getSempV2(resource, ePaginationBehavior.ePaged);
+			subscriptions = this.getDataObjectsElement(responseText, "subscriptionTopic");
+			logger.info("Retrieved " + subscriptions.size() + " topic subscriptions for queue: " + queueName);
+		} catch (SempException e) {
+			logger.error("Failed to retrieve topic subscriptions for queue: " + queueName, e);
+			throw e;
+		}
+		
+		return subscriptions;
+	}
 	public int getClientCount(String vpn) throws SempException {
 //		/curl -X GET -u mikeTest-admin:8p1sqblhq9feuj3n28mkbdtnn4  https://mr-connection-lt30wl00r51.messaging.solace.cloud:943/SEMP/v2/monitor/msgVpns/mikeTest/clients?select=clientId&count=1
 		String url = fullUrl.replace("config", "monitor");

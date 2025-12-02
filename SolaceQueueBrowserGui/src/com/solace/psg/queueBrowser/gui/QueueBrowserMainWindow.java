@@ -1751,11 +1751,61 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		} 
          
 	}
+
+	/**
+	 * Adds topic subscriptions to the display.
+	 * Shows the count and up to N subscriptions (where N is configurable), with an indicator if there are more.
+	 * 
+	 * @param sb StringBuilder to append HTML to
+	 * @param subscriptions List of topic subscription strings
+	 */
+	private void addSubscriptionsToDisplay(StringBuilder sb, List<String> subscriptions) {
+		String fieldNameForDisplay = "Topic Subscriptions";
+		int count = subscriptions.size();
+		
+		// Get max subscriptions to display from config (default 5)
+		int maxToShow = thisCfg != null ? thisCfg.maxTopicSubscriptionsToDisplay : 5;
+		
+		// Build the value string
+		StringBuilder valueBuilder = new StringBuilder();
+		valueBuilder.append(count).append(" subscription").append(count != 1 ? "s" : "");
+		
+		if (count > 0) {
+			valueBuilder.append("<br>");
+			// Show at most maxToShow subscriptions
+			int numToShow = Math.min(maxToShow, count);
+			for (int i = 0; i < numToShow; i++) {
+				valueBuilder.append("&nbsp;&nbsp;• ").append(subscriptions.get(i));
+				if (i < numToShow - 1) {
+					valueBuilder.append("<br>");
+				}
+			}
+			// If there are more than maxToShow, show how many more
+			if (count > maxToShow) {
+				int remaining = count - maxToShow;
+				valueBuilder.append("<br>&nbsp;&nbsp;... ").append(remaining).append(" more subscription");
+				valueBuilder.append(remaining != 1 ? "s" : "").append(" ...");
+			}
+		}
+		
+		String value = valueBuilder.toString();
+		sb.append("<tr><td width='180px' align='right' valign='top'>" + fieldNameForDisplay + ":</td><td align='left' valign='top'>" + value + "</td></tr>");
+	}
+
 	private void onQueueNameSelected(String queueName, JLabel textArea2, JPanel buttonPanel)
 			throws SempException, IOException {
 		
 		QueueInfo info  = sempV2MonitorClient.getQueueInfo(broker.msgVpnName, queueName);
 		selectedQueueMsgCount = info.msgCount;
+
+		// Get topic subscriptions for the queue
+		List<String> subscriptions = new ArrayList<>();
+		try {
+			subscriptions = sempV2ConfigClient.getQueueTopicSubscriptions(broker.msgVpnName, queueName);
+		} catch (SempException e) {
+			logger.warn("Failed to retrieve topic subscriptions for queue: " + queueName, e);
+			// Continue without subscriptions - this is not a critical error
+		}
 
 		//String display = "Queue name: " + queueName + "\nCurrent Message Count: " + selectedQueueMsgCount;
 		StringBuilder sb = new StringBuilder();
@@ -1775,6 +1825,9 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		addRowToDisplay(info, sb, "egressEnabled", false);
 		addRowToDisplay(info, sb, "ingressEnabled", false);
 		addRowToDisplay(info, sb, "partitionCount", false);
+
+		// Add topic subscriptions row
+		addSubscriptionsToDisplay(sb, subscriptions);
 
         sb.append("</table>");
         sb.append("</div>");

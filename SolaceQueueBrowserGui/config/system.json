@@ -1,5 +1,6 @@
 {
 	"version": "v2.4.3",
 	"downloadFolder": "./downloads",
-	"uiProfile": "Modern"
+	"uiProfile": "Modern",
+	"maxTopicSubscriptionsToDisplay": 10
 }
