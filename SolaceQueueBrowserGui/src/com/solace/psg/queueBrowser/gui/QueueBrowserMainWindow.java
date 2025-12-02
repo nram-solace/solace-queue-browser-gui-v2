@@ -33,6 +33,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JCheckBox;
@@ -91,7 +92,6 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private JButton exitButton;
 
 	private IconicTableCellRenderer iconCellRenderer;
-	JLabel qIconlabel; 
 
 	private DefaultTableModel tableModel;
 
@@ -646,13 +646,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	        JPanel detailsPanel = new JPanel();
 	        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
 
-	        qIconlabel = new JLabel(new ImageIcon("config/queue.png"));
-	        qIconlabel.setVisible(false);
-
-	        //JPanel iconTopPanel = new JPanel(new BorderLayout());
-	        //iconTopPanel.add(qIconlabel, BorderLayout.CENTER);
-
-	        detailsPanel.add(qIconlabel);
+	        // Queue icon removed - no longer displayed
 	        detailsPanel.add(detailsLabel);
 	        
 			JScrollPane textScrollPane = new JScrollPane(detailsPanel);
@@ -1088,6 +1082,9 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 
 			JPanel rightPanel = new JPanel();
 			rightPanel.setLayout(new BorderLayout());
+			// Add horizontal separator line at the top of the queue info panel
+			JSeparator topSeparator = new JSeparator(JSeparator.HORIZONTAL);
+			rightPanel.add(topSeparator, BorderLayout.NORTH);
 			rightPanel.add(textScrollPane, BorderLayout.CENTER);
 
 			frame.add(topPanel, BorderLayout.NORTH);
@@ -1403,11 +1400,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			moveAllButton.setEnabled(false);
 			restoreButton.setEnabled(false);
 			
-			// Reset details label - will be populated when queue is auto-selected
-			detailsLabel.setText("");
-			qIconlabel.setVisible(false);
-			
-			logger.info("========================================");
+		// Reset details label - will be populated when queue is auto-selected
+		detailsLabel.setText("");
+		
+		logger.info("========================================");
 			logger.info("BROKER SWITCH COMPLETED SUCCESSFULLY: " + brokerName);
 			logger.info("========================================");
 		} else {
@@ -1807,7 +1803,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 //		display = display.replace("{permission}", "" + info.permission);
 
 		textArea2.setText(display);
-		qIconlabel.setVisible(true);
+		// Icon visibility removed - icon no longer displayed
 		
 		// Enable buttons before removing/re-adding (they will be re-enabled after)
 		browseButton.setEnabled(true);
@@ -2269,13 +2265,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				}
 				// Clear the queue details panel (only when no queues available)
 				if (detailsLabel != null) {
-					detailsLabel.setText("");
-				}
-				// Hide the queue icon if it exists
-				if (qIconlabel != null) {
-					qIconlabel.setVisible(false);
-				}
+				detailsLabel.setText("");
 			}
+			// Queue icon removed - no longer displayed
+		}
 			if (queueToReselect != null && !queueToReselect.isEmpty()) {
 				logger.debug("updateTable: Queue " + queueToReselect + " was filtered out");
 			}
