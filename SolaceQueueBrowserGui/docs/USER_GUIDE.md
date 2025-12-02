@@ -1,6 +1,6 @@
 ![Project Logo](./img/logo.png "Queue Browser Logo")
 # SolaceQueueBrowserGui 2.0 - User Guide and Reference Manual
-v2.3.0 - Dec 01, 2025
+v2.4.2 - Dec 01, 2025
 
 ## Table of Contents
 
@@ -32,6 +32,7 @@ SolaceQueueBrowserGui 2.0 is a desktop GUI application for browsing, inspecting,
 - Message download functionality
 - Password encryption support
 - Cross-platform compatibility (Windows, macOS, Linux, WSL)
+- Multiple UI Profile support including Dark profile.
 
 ### System Requirements
 
@@ -112,7 +113,7 @@ java -jar SolaceQueueBrowserGui-VERSION-jar-with-dependencies.jar -c config/defa
 - `-up, --ui-profile PROFILE`: Override UI profile (Clean, Modern, Dark) (optional)
 - `-h, --help`: Display help information
 
-```bash
+``` bash
 ./scripts/run.sh -c config/default.json --master-password "MASTER-PASSWORD" --ui-profile Dark
 ==================================================
 Starting SolaceQueueBrowserGui
@@ -123,7 +124,7 @@ Starting SolaceQueueBrowserGui
    Config: config/default.json
    Master Password: [provided]
    UI Profile: Dark
-```
+
 
 **Note:** Replace `config/default.json` with your own configuration file name if you created a custom one.
 
@@ -231,18 +232,18 @@ The system configuration is loaded first, followed by the user configuration fil
 
 **WARNING**: DONOT rename or modify this file. 
 
-```json
-{
-  "version": "VERSION",
-  "downloadFolder": "./downloads",
-  "ui": {
-    "fontFamily": null,
-    "defaultFontSize": 14,
-    "headerFontSize": 16,
-    "statusFontSize": 22
-  }
-}
-```
+The system configuration file supports UI profiles for platform-optimized and theme-based configurations. See the [UI Profiles](#ui-profiles) section for detailed information about profiles.
+
+**Profile-Based Configuration (Current)**:
+
+The file now includes a `profiles` section with Clean, Modern, and Dark profiles. Each profile can have:
+- `buttonTextIcons`: Boolean to enable/disable Unicode icons in buttons
+- `font`: Font configuration (family, sizes, etc.)
+- `colors`: Color configuration (table rows, buttons, etc.)
+
+**Legacy Single Configuration (Backward Compatible)**:
+
+The file may also include legacy `font` and `colors` sections at the top level for backward compatibility.
 
 **Error Handling:**
 - If `config/system.json` doesn't exist, the application exits with: "Failed to read system configuration file 'config/system.json': [error]. The system.json file is required."
@@ -315,8 +316,6 @@ The header panel displays broker connection information and controls:
 - **Broker Selector**: Dropdown menu for switching between configured brokers
 - **Connection Information**: Displays current broker hostname, VPN name, SEMP user, and messaging client user
 - **Application Icon**: SolaceQueueBrowserGui 2.0 logo
-
-![](./img/logo.png)
 
 ![](./img/main-window-1.png)
 
@@ -740,24 +739,22 @@ Opens when clicking "Filter" button in message browser.
 
 ## UI Profiles
 
-The application supports multiple UI profiles for different platforms and themes. Profiles allow you to customize fonts, colors, and other UI elements to match your platform or preference.
+The application supports multiple UI profiles for different platforms and themes. Profiles allow you to customize fonts, colors, button icons, and other UI elements to match your platform or preference. The application uses **FlatLaf** (Flat Look and Feel) as the underlying UI framework, with FlatLightLaf for light themes and FlatDarkLaf for the Dark profile.
 
 ### Available Profiles
 
-1. **Clean** - macOS-optimized clean and minimal design
-   - Softer, more subtle colors
-   - SF Pro Display/SF Mono fonts
-   - Smaller font sizes (13px default)
+1. **Clean** - Clean and minimal design
+   - Button text icons: **Disabled**
+   - Use this profile if you are having display issues
 
-2. **Modern** - Windows-optimized modern design (default)
-   - Slightly bolder colors
-   - Segoe UI/Consolas fonts
-   - Standard font sizes (14-16px)
+2. **Modern** - Modern design with Unicode icons (default)
+   - Button text icons: **Enabled**
+   - Uses FlatLightLaf (light theme)
+   - Switch to *Clean* if Unicode icons won't display
 
-3. **Dark** - Dark theme for all platforms
-   - Dark backgrounds (30-40 RGB range)
-   - Light text (220-255 RGB range)
-   - Good contrast ratios for accessibility
+3. **Dark** - Dark theme using FlatDarkLaf
+   - Button text icons: **Enabled**
+   - Automatically switches to FlatDarkLaf (dark theme) 
 
 ### Selecting a Profile
 
@@ -785,25 +782,62 @@ Use the `--ui-profile` (or `-up`) command-line option to override the config fil
 
 **Priority**: Command-line override > Config file setting > Default ("Modern")
 
+### Profile Features
+
+- **Button Text Icons**: Modern and Dark profiles include Unicode icons in buttons (⌕ Browse, ⎘ Copy, ➜ Move, ✕ Delete, ↻ Refresh, ▼ Filter, ⤓ Download, ⎌ Restore, ⊗ Exit). Clean profile has icons disabled.
+- **Theme Integration**: Clean and Modern profiles use FlatLightLaf (light theme). Dark profile automatically uses FlatDarkLaf (dark theme).
+- **Table Row Colors**: Light themes use white and grey alternating rows. Dark theme uses black and dark grey alternating rows.
+
 ### Profile Selection Behavior
 
-- **Profile exists**: Loads font and color settings from the selected profile
+- **Profile exists**: Loads font, color, and icon settings from the selected profile
 - **Profile not found**: Shows error message listing available profiles
 - **No profiles section**: Falls back to legacy single config format (if `font`/`colors` sections exist)
 - **No UI config**: Uses default values
+- **Dark profile**: Automatically switches to FlatDarkLaf theme
+- **Other profiles**: Use FlatLightLaf theme
 
-### Profile Validation
+### Switching Profiles
 
-The application validates profiles on startup:
-- Checks that the specified profile exists in the `profiles` section
-- Warns if profile is missing `font` or `colors` sections (uses defaults)
-- Lists available profiles in error messages if profile not found
+You can switch profiles in two ways:
+
+#### Method 1: Edit Configuration File
+
+1. Open `config/system.json`
+2. Find the `"ui"` section
+3. Change the `"profile"` value to `"Clean"`, `"Modern"`, or `"Dark"`
+4. Save the file
+5. Restart the application
+
+Example:
+```json
+{
+  "ui": {
+    "profile": "Dark"
+  }
+}
+```
+
+#### Method 2: Command-Line Override
+
+Use the `--ui-profile` option to override the config file setting without editing:
+
+```bash
+./scripts/run.sh -c config/default.json --ui-profile Dark
+```
+
+**Priority Order**:
+1. Command-line override (`--ui-profile`) - highest priority
+2. Config file setting (`"profile"` in system.json)
+3. Default profile ("Modern")
+
+**Note**: Command-line override takes precedence over config file settings. Use this to test different profiles without modifying the configuration file.
 
 ### Backward Compatibility
 
 Existing installations using the legacy single-config format continue to work:
 - If `profiles` section doesn't exist, uses `font`/`colors` sections
-- No breaking changes for existing configurations
+- Legacy configs use FlatLightLaf by default
 
 ---
 
@@ -824,6 +858,7 @@ Existing installations using the legacy single-config format continue to work:
     "profiles": {
       "Clean": {
         "description": "string (optional)",
+        "buttonTextIcons": "boolean (optional, default: false)",
         "font": {
           "fontFamily": "string | null (optional)",
           "defaultFontFamilyFallback": "string (optional)",
@@ -864,8 +899,40 @@ Existing installations using the legacy single-config format continue to work:
           "buttonExitForeground": [R, G, B]
         }
       },
-      "Modern": { ... },
-      "Dark": { ... }
+      "Modern": {
+        "description": "string (optional)",
+        "buttonTextIcons": "boolean (optional, default: false)",
+        "font": { ... },
+        "colors": { ... }
+      },
+      "Dark": {
+        "description": "string (optional)",
+        "buttonTextIcons": "boolean (optional, default: false)",
+        "font": { ... },
+        "colors": {
+          "rowEvenBackground": [R, G, B],
+          "rowOddBackground": [R, G, B],
+          "rowSelectedBackground": [R, G, B],
+          "rowForeground": [R, G, B],
+          "rowSelectedForeground": [R, G, B],
+          "buttonRefresh": [R, G, B],
+          "buttonRefreshForeground": [R, G, B],
+          "buttonFilter": [R, G, B],
+          "buttonFilterForeground": [R, G, B],
+          "buttonNavigation": [R, G, B],
+          "buttonNavigationForeground": [R, G, B],
+          "buttonDelete": [R, G, B],
+          "buttonDeleteForeground": [R, G, B],
+          "buttonCopy": [R, G, B],
+          "buttonCopyForeground": [R, G, B],
+          "buttonMove": [R, G, B],
+          "buttonMoveForeground": [R, G, B],
+          "buttonRestore": [R, G, B],
+          "buttonRestoreForeground": [R, G, B],
+          "buttonExit": [R, G, B],
+          "buttonExitForeground": [R, G, B]
+        }
+      }
     },
     "font": { ... },
     "colors": { ... }
@@ -1030,6 +1097,15 @@ Log levels and formatting configured in `config/log4j2.properties`.
 
 ### Version History
 
+- **v2.4.2**: UI profile enhancements:
+  - Button text icons support (Unicode icons for Modern and Dark profiles)
+  - FlatDarkLaf integration for Dark profile (automatic theme switching)
+  - Font consistency improvements (SansSerif throughout Modern profile)
+  - Enhanced table row colors (black/grey for light themes, black/dark grey for dark theme)
+  - Darker button colors for Dark profile
+  - Command-line profile switching via `--ui-profile` option
+  - Script updates (run.sh and run.bat) to support profile switching
+- **v2.4.0**: Multiple UI profile support (Clean, Modern, Dark) for cross-platform customization
 - **v2.3.0**: Runtime distribution package and User Guide updates
 - **v2.2.0**: Added message restore functionality and improved operation logging
 - **v2.1.2**: Multi-broker support, filtering, and password encryption

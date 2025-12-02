@@ -48,6 +48,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2294,17 +2295,10 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 
 	public static void main(String[] args) throws BrokerException {
-		// Initialize FlatLaf before any GUI components
-		try {
-			UIManager.setLookAndFeel(new FlatLightLaf());
-		} catch (Exception ex) {
-			System.err.println("Failed to initialize FlatLaf, using default look and feel: " + ex.getMessage());
-		}
-
 		CommandLineParser parser = new CommandLineParser();
 		parser.parseArgs(args);
 		
-		// Load config to get version (without master password for now)
+		// Load config early to determine UI profile for FlatLaf theme selection
 		Config tempCfg = new Config(parser.configFileProvided);
 		try {
 			// Set command-line profile override if provided
@@ -2323,6 +2317,22 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				logger.error("Failed to load config for version info: " + e.getMessage());
 			}
 		}
+		
+		// Initialize FlatLaf based on selected profile before any GUI components
+		try {
+			// Use FlatDarkLaf for Dark profile, FlatLightLaf for all others
+			if ("Dark".equals(tempCfg.selectedProfile)) {
+				UIManager.setLookAndFeel(new FlatDarkLaf());
+				logger.info("UI Theme: Using FlatDarkLaf for Dark profile");
+			} else {
+				UIManager.setLookAndFeel(new FlatLightLaf());
+				logger.info("UI Theme: Using FlatLightLaf for profile: " + (tempCfg.selectedProfile != null ? tempCfg.selectedProfile : "default"));
+			}
+		} catch (Exception ex) {
+			System.err.println("Failed to initialize FlatLaf, using default look and feel: " + ex.getMessage());
+			logger.error("Failed to initialize FlatLaf: " + ex.getMessage(), ex);
+		}
+		
 		String versionStr = tempCfg.version;
 		
 		System.out.println("=================================================================");
