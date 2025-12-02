@@ -16,7 +16,7 @@
 		"textAreaFontSize": 12
 	},
 	"colors": {
-		"rowEvenBackground": [0, 0, 0],
+		"rowEvenBackground": [50, 50, 50],
 		"rowOddBackground": [40, 40, 40],
 		"rowSelectedBackground": [40, 80, 40],
 		"rowForeground": [220, 220, 220],
