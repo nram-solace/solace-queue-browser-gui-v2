@@ -1126,20 +1126,11 @@ Log levels and formatting configured in `config/log4j2.properties`.
 ## Appendix
 
 ### Version History
-
-- **v2.4.2**: UI profile enhancements:
-  - Button text icons support (Unicode icons for Modern and Dark profiles)
-  - FlatDarkLaf integration for Dark profile (automatic theme switching)
-  - Font consistency improvements (SansSerif throughout Modern profile)
-  - Enhanced table row colors (black/grey for light themes, black/dark grey for dark theme)
-  - Darker button colors for Dark profile
-  - Command-line profile switching via `--ui-profile` option
-  - Script updates (run.sh and run.bat) to support profile switching
+- **v2.5.0**: Support for number and list of topic subscriptions in the main window
 - **v2.4.0**: Multiple UI profile support (Clean, Modern, Dark) for cross-platform customization
 - **v2.3.0**: Runtime distribution package and User Guide updates
 - **v2.2.0**: Added message restore functionality and improved operation logging
-- **v2.1.2**: Multi-broker support, filtering, and password encryption
-- **v2.0.2**: SMF error handling improvements
+- **v2.1.0**: Multi-broker support, filtering, and password encryption
 - **v2.0.0**: Major UI improvements and cross-platform compatibility
 
 ### Support
