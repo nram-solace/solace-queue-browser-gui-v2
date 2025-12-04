@@ -1,7 +1,7 @@
 ![Project Logo](./img/logo.png "SolaceQueueBrowserGui 2.0 Logo")
 
 # SolaceQueueBrowserGui 2.0
-v2.5.4 - Dec 02, 2025
+v2.5.5 - Dec 04, 2025
 
 Desktop GUI for browsing Solace Queues and managing messages.
 
@@ -65,9 +65,10 @@ Please see **[User Guide](./docs/USER_GUIDE.md)** under docs for detailed instru
    ```
 
 2. **Create your broker configuration file**:
-   - Copy `config/sample-config.json` to `config/default.json`
+   - Copy `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) to `config/default.json`
    - Edit `config/default.json` with your specific broker connection details
-   - See `config/sample-config.json` for reference structure
+   - See `config/sample-config-plain.json` for plain text password example
+   - See `config/sample-config-encrypted.json` for encrypted password example
 
 3. **Run the application**:
    ```bash
@@ -84,7 +85,7 @@ The application uses JSON configuration files to connect to Solace brokers. Conf
 - **System configuration** - UI profiles, fonts, colors, and other system settings
 
 **Quick setup:**
-1. Copy `config/sample-config.json` to `config/default.json`
+1. Copy `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) to `config/default.json`
 2. Edit `config/default.json` with your broker connection details
 
 **Note:** The application requires both SEMP admin credentials (for queue management) and messaging client credentials (for message browsing).
@@ -135,11 +136,11 @@ For detailed feature descriptions, usage instructions, and examples, see the [Us
 ## Package Contents
 
 - **Application JAR** - Self-contained executable with all dependencies
-- **Configuration files** - System config, logging config, sample config templates (`sample-config.json`, `solace-cloud.json`), and icons
+- **Configuration files** - System config, logging config, sample config templates (`sample-config-plain.json`, `sample-config-encrypted.json`, `solace-cloud.json`), and icons
 - **Runtime scripts** - `run.sh` (application launcher) and `crypt-util.sh` (password encryption utility)
 - **Documentation** - This README and comprehensive User Guide in `docs/` folder
 
-**Note:** Create your own `config/default.json` by copying `config/sample-config.json` and updating it with your broker connection details.
+**Note:** Create your own `config/default.json` by copying `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) and updating it with your broker connection details.
 
 ## Documentation
 

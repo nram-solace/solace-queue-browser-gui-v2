@@ -1,6 +1,6 @@
 ![Project Logo](./img/logo.png "Queue Browser Logo")
 # SolaceQueueBrowserGui 2.0 - User Guide and Reference Manual
-v2.5.4 - Dec 02, 2025
+v2.5.5 - Dec 04, 2025
 
 ## Table of Contents
 
@@ -67,7 +67,8 @@ SolaceQueueBrowserGui 2.0 is a desktop GUI application for browsing, inspecting,
    ├── config/                                                   # Configuration files
    │   ├── system.json                                          # System configuration (required)
    │   ├── log4j2.properties                                    # Logging configuration
-   │   ├── sample-config.json                                   # Sample user configuration template
+   │   ├── sample-config-plain.json                             # Sample user configuration (plain text passwords)
+   │   ├── sample-config-encrypted.json                         # Sample user configuration (encrypted passwords)
    │   ├── solace-cloud.json                                    # Sample Solace Cloud configuration
    │   └── *.png                                                # Application icons
    ├── scripts/                                                  # Runtime scripts
@@ -84,7 +85,7 @@ SolaceQueueBrowserGui 2.0 is a desktop GUI application for browsing, inspecting,
 ### Running the Application
 
 **Before running, create your configuration file:**
-1. Copy `config/sample-config.json` to `config/default.json`
+1. Copy `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) to `config/default.json`
 2. Edit `config/default.json` with your specific broker connection details
 
 #### Using the Run Script (Recommended)
@@ -199,7 +200,7 @@ When the application detects encrypted passwords, it prompts for the master pass
 ./scripts/run.sh -c config/default.json --master-password "masterKey"
 ```
 
-**Note:** Ensure you have created `config/default.json` by copying and editing `config/sample-config.json` with your broker details.
+**Note:** Ensure you have created `config/default.json` by copying and editing `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) with your broker details.
 
 **Note**: Quote the master password if it contains special characters (e.g., `#`, `$`, `!`).
 
@@ -255,9 +256,11 @@ The file may also include legacy `font` and `colors` sections at the top level f
 #### User Configuration File Format
 
 **Getting Started:**
-1. Copy `config/sample-config.json` to `config/default.json`
+1. Copy `config/sample-config-plain.json` (or `config/sample-config-encrypted.json`) to `config/default.json`
 2. Edit `config/default.json` with your specific broker connection details (hostnames, credentials, VPN names, etc.)
-3. The `sample-config.json` file is provided as a reference template only
+3. The sample config files are provided as reference templates:
+   - `sample-config-plain.json` - Example with plain text passwords
+   - `sample-config-encrypted.json` - Example with encrypted passwords
 
 User configuration files contain broker connection information. This file supports multiple broker connections in a list. 
 
@@ -298,7 +301,7 @@ User configuration files contain broker connection information. This file suppor
 - `messagingPw`: Messaging client password (supports encrypted format with ENC:)
 
 
-See `../config/sample-config.json` for a sample configuration file with multiple broker entries. Copy this file to `config/default.json` and update it with your specific broker connection details.
+See `../config/sample-config-plain.json` or `../config/sample-config-encrypted.json` for sample configuration files with multiple broker entries. Copy one of these files to `config/default.json` and update it with your specific broker connection details.
 
 ---
 
