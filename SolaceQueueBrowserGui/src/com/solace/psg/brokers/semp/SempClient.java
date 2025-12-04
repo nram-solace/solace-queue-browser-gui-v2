@@ -307,6 +307,31 @@ public class SempClient {
 				} else {
 					logger.error("SEMP Request Error Details - Path: " + resource, e);
 					finished = true;
+					
+					// Check if this is a connection failure
+					String exceptionType = e.getClass().getSimpleName();
+					String innerExceptionType = (inner != null) ? inner.getClass().getSimpleName() : "";
+					
+					if (strErr != null && (
+							strErr.contains("Connection refused") ||
+							strErr.contains("Failed to connect") ||
+							strErr.contains("ConnectException") ||
+							strErr.contains("UnknownHostException") ||
+							strErr.contains("timeout") ||
+							strErr.contains("TimeoutException") ||
+							strErr.contains("No route to host") ||
+							exceptionType.contains("ConnectException") ||
+							exceptionType.contains("UnknownHostException") ||
+							exceptionType.contains("TimeoutException") ||
+							innerExceptionType.contains("ConnectException") ||
+							innerExceptionType.contains("UnknownHostException") ||
+							innerExceptionType.contains("TimeoutException")
+						)) {
+						// This is a connection error - provide clear user-friendly message
+						throw new SempException("Unable to connect to SEMP API at " + urlToUse + ". " +
+								"Please verify the broker host, port, VPN name, and network connectivity.");
+					}
+					
 					if (inner != null) {
 						throwSempError(e, strErr);
 					} else {
@@ -320,20 +345,27 @@ public class SempClient {
 
 	private void throwSempError(Throwable t, String responseText) throws SempException {
 		// logger.debug("error response:" + responseText);
-		JSONObject obj = new JSONObject(responseText);
-		logger.debug("converted error response to json Obj");
-		if (obj.has("meta")) {
-			logger.debug("got meta obj");
-			JSONObject metaObj = obj.getJSONObject("meta");
-			if (metaObj.has("error")) {
-				JSONObject errorObj = metaObj.getJSONObject("error");
-				logger.debug("got error obj");
-				int code = errorObj.getInt("code");
-				String desc = errorObj.getString("description");
-				String status = errorObj.getString("status");
-				throw new SempException("SEMP Error (" + code + "): " + status + ": " + desc);
+		try {
+			JSONObject obj = new JSONObject(responseText);
+			logger.debug("converted error response to json Obj");
+			if (obj.has("meta")) {
+				logger.debug("got meta obj");
+				JSONObject metaObj = obj.getJSONObject("meta");
+				if (metaObj.has("error")) {
+					JSONObject errorObj = metaObj.getJSONObject("error");
+					logger.debug("got error obj");
+					int code = errorObj.getInt("code");
+					String desc = errorObj.getString("description");
+					String status = errorObj.getString("status");
+					throw new SempException("SEMP Error (" + code + "): " + status + ": " + desc);
+				}
+			} else {
+				throw new SempException(t.getMessage());
 			}
-		} else {
+		} catch (org.json.JSONException jsonEx) {
+			// Response is not JSON - likely a connection error or HTML error page
+			logger.debug("Response is not valid JSON, treating as connection error: " + jsonEx.getMessage());
+			// Return the original error message which should be more helpful
 			throw new SempException(t.getMessage());
 		}
 	}
@@ -789,25 +821,50 @@ public class SempClient {
 	public void parseException(Exception e) throws SempException {
 		String errorBody = e.getMessage();
 		SempException se = null;
-		if (errorBody.contains("\"meta\":")) {
-
+		
+		// Check if this is a connection error first
+		String exceptionType = e.getClass().getSimpleName();
+		if (errorBody != null && (
+				errorBody.contains("Connection refused") ||
+				errorBody.contains("Failed to connect") ||
+				errorBody.contains("ConnectException") ||
+				errorBody.contains("UnknownHostException") ||
+				errorBody.contains("timeout") ||
+				errorBody.contains("TimeoutException") ||
+				errorBody.contains("No route to host") ||
+				exceptionType.contains("ConnectException") ||
+				exceptionType.contains("UnknownHostException") ||
+				exceptionType.contains("TimeoutException")
+			)) {
+			// This is a connection error - provide clear user-friendly message
+			throw new SempException("Unable to connect to SEMP API. Please verify the broker host, port, and network connectivity. " +
+					"Details: " + errorBody);
+		}
+		
+		if (errorBody != null && errorBody.contains("\"meta\":")) {
 			// System.out.println(errorBody);
 			errorBody = errorBody.replace("java.lang.Exception: ", "");
 
-			JSONObject doc = new JSONObject(errorBody);
-			JSONObject meta = doc.getJSONObject("meta");
-			int code = meta.getInt("responseCode");
-			JSONObject error = meta.getJSONObject("error");
-			int subCode = error.getInt("code");
-			String desc = error.getString("description");
-			String status = error.getString("status");
+			try {
+				JSONObject doc = new JSONObject(errorBody);
+				JSONObject meta = doc.getJSONObject("meta");
+				int code = meta.getInt("responseCode");
+				JSONObject error = meta.getJSONObject("error");
+				int subCode = error.getInt("code");
+				String desc = error.getString("description");
+				String status = error.getString("status");
 
-			String msg = "Error " + code + " (subcode=" + subCode + ", status=" + status + ") " + desc;
-			se = new SempException(msg);
-			se.code = code;
-			se.subCode = subCode;
-			se.description = desc;
-			se.status = status;
+				String msg = "Error " + code + " (subcode=" + subCode + ", status=" + status + ") " + desc;
+				se = new SempException(msg);
+				se.code = code;
+				se.subCode = subCode;
+				se.description = desc;
+				se.status = status;
+			} catch (org.json.JSONException jsonEx) {
+				// Failed to parse JSON - just use the original error message
+				logger.warn("Failed to parse error response as JSON: " + jsonEx.getMessage());
+				se = new SempException(errorBody);
+			}
 		} else {
 			se = new SempException(errorBody);
 		}
