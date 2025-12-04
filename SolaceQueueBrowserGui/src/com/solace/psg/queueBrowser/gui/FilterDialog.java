@@ -251,7 +251,7 @@ public class FilterDialog extends JDialog{
             this.setSize(800, 600);
             this.setLayout(new GridLayout(4, 1));
             
-            ImageIcon icon = new ImageIcon("config/filter.png");
+            ImageIcon icon = new ImageIcon("img/filter.png");
 			Image image = icon.getImage();
 			this.setIconImage(image);
 

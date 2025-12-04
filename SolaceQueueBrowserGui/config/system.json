@@ -1,6 +1,6 @@
 {
-	"version": "v2.5.4",
+	"version": "v2.5.5",
 	"downloadFolder": "./downloads",
 	"uiProfile": "Modern",
-	"maxTopicSubscriptionsToDisplay": 10
+	"maxTopicSubscriptionsToDisplay": 5
 }

@@ -669,7 +669,7 @@ public class RestoreDialog {
 		tableModel.setRowCount(0);
 		
 		// Add rows, preserving selection state from selectedMessageKeys
-		ImageIcon messageIcon = new ImageIcon("config/messageIcon32.png");
+		ImageIcon messageIcon = new ImageIcon("img/messageIcon32.png");
 		for (ParsedMessage msg : currentPageMessages) {
 			String messageKey = getMessageKey(msg.messageId, msg.timestamp);
 			boolean isSelected = selectedMessageKeys.contains(messageKey);

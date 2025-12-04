@@ -489,7 +489,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	}
 
 	private Object[][] getTableData(List<QueueInfo> queueInfos) {
-		ImageIcon qIcon = new ImageIcon("config/queueSm.png");
+		ImageIcon qIcon = new ImageIcon("img/queueSm.png");
 		Object[][] data = new Object[queueInfos.size()][];
 		for (int i = 0; i < queueInfos.size(); i++) {
 			QueueInfo info = queueInfos.get(i);
@@ -508,7 +508,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			frame.setSize(1200, 800);
 			frame.setLayout(new BorderLayout());
 
-			ImageIcon icon = new ImageIcon("config/queueBrowserIcon.png");
+			ImageIcon icon = new ImageIcon("img/queueBrowserIcon.png");
 			Image image = icon.getImage();
 			frame.setIconImage(image);
 			

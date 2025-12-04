@@ -1,0 +1,34 @@
+{
+	"eventBrokers": [
+		{
+			"name": "Local Default",
+			"sempHost": "http://localhost:8080/SEMP/v2/config",
+			"sempAdminUser": "admin",
+			"sempAdminPw": "admin",
+			"msgVpnName": "default",
+			"messagingHost": "tcp://localhost:55333",
+			"messagingClientUsername": "default",
+			"messagingPw": "default"
+		}, 
+		{
+			"name": "Local Test",
+			"sempHost": "http://localhost:8080/SEMP/v2/config",
+			"sempAdminUser": "admin",
+			"sempAdminPw": "admin=",
+			"msgVpnName": "TestVPN",
+			"messagingHost": "tcp://localhost:55333",
+			"messagingClientUsername": "default",
+			"messagingPw": "default"
+		},
+		{
+            "name": "Cloud Broker - Test",
+            "sempHost": "https://nramtest.messaging.solace.cloud:943/SEMP/v2/config",
+            "sempAdminUser": "mission-control-manager",
+            "sempAdminPw": "*****",
+            "msgVpnName": "nramtest-vpn",
+            "messagingHost": "tcps://nramtest.messaging.solace.cloud::55443",
+            "messagingClientUsername": "test",
+            "messagingPw" : "*****"
+        }
+	]
+}

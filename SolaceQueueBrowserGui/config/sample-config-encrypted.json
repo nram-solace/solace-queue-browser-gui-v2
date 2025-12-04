@@ -25,7 +25,7 @@
             "sempHost": "https://nramtest.messaging.solace.cloud:943/SEMP/v2/config",
             "sempAdminUser": "mission-control-manager",
             "sempAdminPw": "ENC:AES256GCM:Z8Fb6KU0gnSUd4bqsRRddzD/aOjhxW0r/OegoidalcqdK4dhlDYSosKu:uq+Zjg2agRXyf69K:mVkx6rq4Ax4Tmiq8rwlaUg==",
-            "msgVpnName": "nram-test",
+            "msgVpnName": "nramtest-vpn",
             "messagingHost": "tcps://nramtest.messaging.solace.cloud::55443",
             "messagingClientUsername": "test",
             "messagingPw" : "ENC:AES256GCM:damNQc8IFjsAGGTlhSqK03C91brjkVc=:ER/A9/B29Tu4dID8:U0ZyNgcM/IIfArgIwue14g=="

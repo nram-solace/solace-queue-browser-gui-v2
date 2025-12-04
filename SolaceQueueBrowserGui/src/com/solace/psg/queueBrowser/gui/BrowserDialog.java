@@ -175,7 +175,7 @@ public class BrowserDialog implements IDragDropInstigator {
 		this.estimatedTotalMessageCount = nEstimatedMessageCount;
 		this.estimatedPageCount = (nEstimatedMessageCount / nItemsPerPage) + 1;
 		this.iconCellRenderer = new IconicTableCellRenderer(config);
-		this.messageIcon = new ImageIcon("config/messageIcon32.png");
+		this.messageIcon = new ImageIcon("img/messageIcon32.png");
 		this.sempV2ActionClient = sempV2ActionClient;
 		this.downloadFolder = downloadFolder;
 		this.config = config != null ? config : new Config(""); // Fallback if null
