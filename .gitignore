@@ -75,3 +75,5 @@ tmp/**
 .#specs/**
 .password
 .local/**
+.dev/**
+CLAUDE.md
