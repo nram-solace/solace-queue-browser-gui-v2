@@ -28,6 +28,11 @@ public class Config {
 	
 	// Queue display configuration
 	public int maxTopicSubscriptionsToDisplay = 5; // Default: show up to 5 topic subscriptions
+
+	/** Queue list chrome: {@value #UI_MODE_SIMPLE} (default) or {@value #UI_MODE_ADVANCED} — from system.json key {@code uiMode} */
+	public static final String UI_MODE_SIMPLE = "simple";
+	public static final String UI_MODE_ADVANCED = "advanced";
+	private String uiMode = UI_MODE_SIMPLE;
 	
 	// UI Configuration - OS-agnostic defaults
 	public String fontFamily = null; // null means use FlatLaf default
@@ -281,6 +286,27 @@ public class Config {
 					maxTopicSubscriptionsToDisplay = 5;
 				}
 			}
+
+			String uiModeStr = null;
+			if (systemDoc.has("uiMode")) {
+				uiModeStr = systemDoc.getString("uiMode");
+			} else if (systemDoc.has("queueListMode")) {
+				uiModeStr = systemDoc.getString("queueListMode");
+			}
+			if (uiModeStr != null) {
+				String mode = uiModeStr.trim();
+				if (UI_MODE_ADVANCED.equalsIgnoreCase(mode)) {
+					uiMode = UI_MODE_ADVANCED;
+				} else if (UI_MODE_SIMPLE.equalsIgnoreCase(mode)) {
+					uiMode = UI_MODE_SIMPLE;
+				} else {
+					logger.warn("uiMode must be '{}' or '{}', got '{}', using '{}'",
+							UI_MODE_SIMPLE, UI_MODE_ADVANCED, uiModeStr, UI_MODE_SIMPLE);
+					uiMode = UI_MODE_SIMPLE;
+				}
+			} else {
+				uiMode = UI_MODE_SIMPLE;
+			}
 			
 			// Load UI profile
 			loadUIProfile(systemDoc);
@@ -397,6 +423,20 @@ public class Config {
 	 */
 	public List<Broker> getBrokers() {
 		return brokers;
+	}
+
+	/**
+	 * @return {@link #UI_MODE_SIMPLE} or {@link #UI_MODE_ADVANCED} from system.json {@code uiMode}
+	 */
+	public String getUiMode() {
+		return uiMode;
+	}
+
+	/**
+	 * @return true when queue list should use the simplified filter UI (no type row; category checkbox)
+	 */
+	public boolean isSimpleUiMode() {
+		return UI_MODE_SIMPLE.equals(uiMode);
 	}
 	
 	/**

@@ -114,6 +114,8 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 	private JRadioButton categoryAll;
 	private JRadioButton categoryUser;
 	private JRadioButton categorySystem;
+	/** Simple queue-list mode only: unchecked = user queues, checked = all queues */
+	private JCheckBox showSystemQueues;
 	private JComboBox<String> sortComboBox;
 	private JButton sortAscDescButton;
 	private boolean sortAscending = true;
@@ -1100,15 +1102,7 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 			// Apply initial filters and sorting after UI is fully visible
 			// This ensures User category filter is applied by default
 			// Note: If no broker is connected, queues will be empty
-			SwingUtilities.invokeLater(() -> {
-				if (categoryUser != null && categoryUser.isSelected()) {
-					applyFiltersAndSorting();
-				} else {
-					// If for some reason categoryUser is not selected, apply filters anyway
-					// (this should not happen since we set it as default, but just in case)
-					applyFiltersAndSorting();
-				}
-			});
+			SwingUtilities.invokeLater(this::applyFiltersAndSorting);
 	}
 	/**
 	 * Helper method to check if a broker has been selected (has meaningful values)
@@ -1982,45 +1976,52 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 		searchPanel.add(searchField);
 		panel.add(searchPanel);
 		
-	// Queue type filters
-	JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-	typePanel.add(new JLabel("Type:"));
-	filterExclusive = new JCheckBox("Exclusive");
-	filterNonExclusive = new JCheckBox("Non-Exclusive");
-	filterPartitioned = new JCheckBox("Partitioned");
-	filterLastValue = new JCheckBox("LVQ");
-	
-	// Set tooltip for LVQ
-	filterLastValue.setToolTipText("Last Value Queue");
-	
-	filterExclusive.addActionListener(e -> applyFiltersAndSorting());
-	filterNonExclusive.addActionListener(e -> applyFiltersAndSorting());
-	filterPartitioned.addActionListener(e -> applyFiltersAndSorting());
-	filterLastValue.addActionListener(e -> applyFiltersAndSorting());
-	
-	typePanel.add(filterExclusive);
-	typePanel.add(filterNonExclusive);
-	typePanel.add(filterPartitioned);
-	typePanel.add(filterLastValue);
-	
-	panel.add(typePanel);
-		
-		// Category filter
+		boolean simpleQueueList = thisCfg != null && thisCfg.isSimpleUiMode();
+		if (!simpleQueueList) {
+			JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			typePanel.add(new JLabel("Type:"));
+			filterExclusive = new JCheckBox("Exclusive");
+			filterNonExclusive = new JCheckBox("Non-Exclusive");
+			filterPartitioned = new JCheckBox("Partitioned");
+			filterLastValue = new JCheckBox("LVQ");
+			filterLastValue.setToolTipText("Last Value Queue");
+			filterExclusive.addActionListener(e -> applyFiltersAndSorting());
+			filterNonExclusive.addActionListener(e -> applyFiltersAndSorting());
+			filterPartitioned.addActionListener(e -> applyFiltersAndSorting());
+			filterLastValue.addActionListener(e -> applyFiltersAndSorting());
+			typePanel.add(filterExclusive);
+			typePanel.add(filterNonExclusive);
+			typePanel.add(filterPartitioned);
+			typePanel.add(filterLastValue);
+			panel.add(typePanel);
+		}
+
 		JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		categoryPanel.add(new JLabel("Category:"));
-		categoryFilterGroup = new ButtonGroup();
-		categoryAll = new JRadioButton("All");
-		categoryUser = new JRadioButton("User", true); // Default to User
-		categorySystem = new JRadioButton("System");
-		categoryFilterGroup.add(categoryAll);
-		categoryFilterGroup.add(categoryUser);
-		categoryFilterGroup.add(categorySystem);
-		categoryAll.addActionListener(e -> applyFiltersAndSorting());
-		categoryUser.addActionListener(e -> applyFiltersAndSorting());
-		categorySystem.addActionListener(e -> applyFiltersAndSorting());
-		categoryPanel.add(categoryAll);
-		categoryPanel.add(categoryUser);
-		categoryPanel.add(categorySystem);
+		if (simpleQueueList) {
+			categoryFilterGroup = null;
+			categoryAll = null;
+			categoryUser = null;
+			categorySystem = null;
+			showSystemQueues = new JCheckBox("Show system queues");
+			showSystemQueues.addActionListener(e -> applyFiltersAndSorting());
+			categoryPanel.add(showSystemQueues);
+		} else {
+			showSystemQueues = null;
+			categoryPanel.add(new JLabel("Category:"));
+			categoryFilterGroup = new ButtonGroup();
+			categoryAll = new JRadioButton("All");
+			categoryUser = new JRadioButton("User", true);
+			categorySystem = new JRadioButton("System");
+			categoryFilterGroup.add(categoryAll);
+			categoryFilterGroup.add(categoryUser);
+			categoryFilterGroup.add(categorySystem);
+			categoryAll.addActionListener(e -> applyFiltersAndSorting());
+			categoryUser.addActionListener(e -> applyFiltersAndSorting());
+			categorySystem.addActionListener(e -> applyFiltersAndSorting());
+			categoryPanel.add(categoryAll);
+			categoryPanel.add(categoryUser);
+			categoryPanel.add(categorySystem);
+		}
 		panel.add(categoryPanel);
 		
 		// Sort controls
@@ -2110,22 +2111,26 @@ public class QueueBrowserMainWindow implements IDragDropTarget {
 				.collect(Collectors.toCollection(ArrayList::new));
 		}
 		
-		// Category filter
-		// Default to User if no category is explicitly selected (shouldn't happen, but safety check)
-		boolean userSelected = (categoryUser != null && categoryUser.isSelected());
-		boolean systemSelected = (categorySystem != null && categorySystem.isSelected());
-		boolean allSelected = (categoryAll != null && categoryAll.isSelected());
-		
-		if (userSelected) {
-			filteredQueues = filteredQueues.stream()
-				.filter(q -> q.name != null && !q.name.startsWith("#"))
-				.collect(Collectors.toCollection(ArrayList::new));
-		} else if (systemSelected) {
-			filteredQueues = filteredQueues.stream()
-				.filter(q -> q.name != null && q.name.startsWith("#"))
-				.collect(Collectors.toCollection(ArrayList::new));
+		// Category filter (simple mode: checkbox; advanced: All / User / System)
+		if (showSystemQueues != null) {
+			if (!showSystemQueues.isSelected()) {
+				filteredQueues = filteredQueues.stream()
+					.filter(q -> q.name != null && !q.name.startsWith("#"))
+					.collect(Collectors.toCollection(ArrayList::new));
+			}
+		} else {
+			boolean userSelected = (categoryUser != null && categoryUser.isSelected());
+			boolean systemSelected = (categorySystem != null && categorySystem.isSelected());
+			if (userSelected) {
+				filteredQueues = filteredQueues.stream()
+					.filter(q -> q.name != null && !q.name.startsWith("#"))
+					.collect(Collectors.toCollection(ArrayList::new));
+			} else if (systemSelected) {
+				filteredQueues = filteredQueues.stream()
+					.filter(q -> q.name != null && q.name.startsWith("#"))
+					.collect(Collectors.toCollection(ArrayList::new));
+			}
 		}
-		// If "All" is selected or no selection (shouldn't happen), don't filter by category
 		
 		// Apply sorting - ensure we have a mutable ArrayList
 		if (!(filteredQueues instanceof ArrayList)) {
