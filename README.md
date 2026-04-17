@@ -3,7 +3,9 @@
 # SolaceQueueBrowserGui 2.0
 v2.6.0 - Apr 15, 2026
 
-Desktop GUI for browsing Solace Queues and managing messages.
+**SolaceQueueBrowserGui 2.0** is an enhanced Desktop GUI for browsing Solace Queues and managing messages. 
+
+This is a fork of [SolaceQueueBrowserGui](https://github.com/SolaceServices/SolaceQueueBrowserGui).
 
 ![](./img/overview1.png)
 
@@ -13,7 +15,7 @@ Desktop GUI for browsing Solace Queues and managing messages.
 
 **SolaceQueueBrowserGui-v2.0** (this fork) adds enhanced UI, several additional features and fixes.
 
-Please see **[User Guide](./docs/USER_GUIDE.md)** under docs for detailed information and instructions.
+Please see **[User Guide](SolaceQueueBrowserGui/docs/USER_GUIDE.md)** for detailed information and instructions.
 
 ### Key Features
 
@@ -153,5 +155,5 @@ For detailed feature descriptions, usage instructions, and examples, see the [Us
 **This tool is NOT a Solace supported product.** It has been created by Solace's professional services team to augment Solace products.
 
 ## Contributors
-- This Repo (fork) is mainained by [Ramesh Natarajan](mailto:ramesh.natarajan@solace.com)
-- Original repo owner is [Mike Obrien](mailto:mike.obrien@solace.com)
+- This Repo is mainained by [Ramesh Natarajan](mailto:ramesh.natarajan@solace.com)
+- Upstream repo is maintained by [Mike Obrien](mailto:mike.obrien@solace.com)
